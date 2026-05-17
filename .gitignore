@@ -17,6 +17,7 @@ coverage/
 *.log
 .npm/
 .pnpm-debug.log*
+*.tsbuildinfo
 
 # --- IDE / OS ---
 .idea/
