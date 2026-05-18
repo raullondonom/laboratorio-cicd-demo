@@ -147,15 +147,33 @@
   </div>
 
   <div class="card">
-    <h3>Qué incluye el repositorio entregado</h3>
-    <ul>
-      <li><code>normal/</code> — aplicación funcionando, con pruebas <strong>insuficientes</strong> (cobertura ~40 %).</li>
-      <li><code>aumentar-cobertura/</code> — pruebas adicionales que la pareja copia encima para superar el 80 %.</li>
-      <li><code>scripts/setup-windows.ps1</code> — instalador de Python 3.12.10 + Node 20 + gh CLI.</li>
-      <li><code>docker-compose.yml</code> — backend FastAPI, frontend React, PostgreSQL, pgAdmin4.</li>
-      <li><code>.github/workflows/</code> — pipelines <code>ci-develop.yml</code> y <code>ci-master.yml</code>.</li>
-      <li><code>sonar-project.properties</code> — configuración para SonarCloud.</li>
-    </ul>
+    <h3>Estructura del kit del laboratorio</h3>
+    <p>El kit que recibes consta de un repositorio Git y dos carpetas overlay <strong>fuera</strong> del repositorio:</p>
+    <pre style="background:var(--code-bg);color:var(--code-text);padding:1rem;border-radius:8px;overflow-x:auto;font-size:0.85rem"><code>Laboratorio CI CD/             ← kit (NO es un repositorio)
+├── laboratorio-cicd-demo/     ← el repo que clonan los estudiantes (Etapa 1)
+│   ├── backend/               ← FastAPI: solo /health
+│   ├── frontend/              ← React: solo pantalla "Hola"
+│   ├── docker-compose.yml
+│   ├── guia.html              ← este documento
+│   ├── scripts/setup-windows.ps1
+│   ├── sonar-project.properties
+│   └── .github/workflows/
+├── etapa-2/                   ← overlay para Etapa 2 (CRUD)
+└── etapa-3/                   ← overlay para Etapa 3 (tests faltantes)</code></pre>
+    <p>Las etapas <strong>se aplican como overlay</strong>: se copia el contenido de la carpeta <code>etapa-N/</code>
+    sobre la raíz del repositorio, se hace commit y se abre el PR correspondiente.</p>
+  </div>
+
+  <div class="card">
+    <h3>Las 3 etapas</h3>
+    <table>
+      <thead><tr><th>Etapa</th><th>Qué hace la pareja</th><th>Resultado esperado</th></tr></thead>
+      <tbody>
+        <tr><td><strong>1. Setup inicial</strong></td><td>Clonar repo, conectar SonarCloud, configurar secret, branch protection. La app ya tiene 100 % de cobertura (es trivial).</td><td>Pipelines verdes en ambos workflows.</td></tr>
+        <tr><td><strong>2. Agregar CRUD</strong></td><td>Aplicar overlay <code>etapa-2/</code>. Se añade el código real del CRUD <em>sin</em> agregar tests para él.</td><td>PR a <code>develop</code> ✅, PR a <code>master</code> ❌ (cobertura ~30 %, Sonar FAILED).</td></tr>
+        <tr><td><strong>3. Agregar tests</strong></td><td>Aplicar overlay <code>etapa-3/</code>. Se añaden los tests del CRUD.</td><td>PR a <code>develop</code> ✅, PR a <code>master</code> ✅ (cobertura ~96 %, Sonar PASSED).</td></tr>
+      </tbody>
+    </table>
   </div>
 
   <div class="card">
@@ -860,38 +878,61 @@ jobs:
 
 <!-- ============================================================== -->
 <section id="etapas">
-  <h2>12. Recorrido de las dos etapas</h2>
+  <h2>12. Recorrido de las tres etapas</h2>
 
   <div class="card">
-    <h3><span class="badge-stage fail">ETAPA 1</span> Cobertura insuficiente</h3>
+    <h3><span class="badge-stage pass">ETAPA 1</span> Setup inicial</h3>
+    <p>La pareja recibe el repo ya con la Etapa 1 cargada (app trivial con endpoint <code>/health</code> y pantalla "Hola"). El trabajo de esta etapa es de <strong>configuración</strong>:</p>
     <ol>
-      <li>Desde <code>develop</code>, crear rama: <code>git checkout -b feature/etapa-1-cobertura-baja</code>.</li>
-      <li>No tocar el código fuente. Verificar que existen <code>backend/tests/test_smoke.py</code> y <code>frontend/src/__tests__/App.test.tsx</code>.</li>
-      <li>Correr local: <code>cd backend && pytest --cov=app --cov-fail-under=80</code> → debería mostrar ~56 % y FALLAR.</li>
-      <li>Correr local: <code>cd frontend && npm run test:coverage</code> → debería mostrar ~35 % y FALLAR.</li>
-      <li>Commit y push: <code>git add . && git commit -m "etapa 1: pruebas insuficientes" && git push</code>.</li>
-      <li>Abrir <strong>PR a develop</strong>. El workflow <code>ci-develop</code> es <strong>permisivo</strong> (no exige 80 %), pasa en verde. Mergear.</li>
-      <li>Abrir <strong>PR de develop a master</strong>. El workflow <code>ci-master</code> es <strong>estricto</strong>: cobertura &lt;80 % y Quality Gate FAILED.</li>
-      <li>🖼 <strong>Capturar evidencia</strong> de los checks rojos y del dashboard FAILED de Sonar.</li>
+      <li>Crear repo público en GitHub y subir el contenido de <code>laboratorio-cicd-demo/</code>.</li>
+      <li>Crear ramas <code>develop</code> y <code>master</code>.</li>
+      <li>Importar el repo en SonarCloud y generar <code>SONAR_TOKEN</code>.</li>
+      <li>Guardar el token como secret en GitHub (Settings → Secrets → Actions).</li>
+      <li>Configurar branch protection en ambas ramas.</li>
+      <li>Levantar local con <code>docker compose up -d</code> y verificar los 4 servicios.</li>
+      <li>🖼 Capturar evidencia: repo creado, branch protections, secret configurado, app corriendo.</li>
+    </ol>
+    <p>Al final de la Etapa 1 todos los pipelines pasan en verde (la app trivial tiene 100 % de cobertura).</p>
+  </div>
+
+  <div class="card">
+    <h3><span class="badge-stage fail">ETAPA 2</span> Agregar CRUD (sin tests)</h3>
+    <ol>
+      <li>Desde <code>develop</code>: <code>git checkout -b feature/etapa-2-crud</code>.</li>
+      <li>Aplicar el overlay:
+        <div class="code-wrap"><button class="copy-btn">Copiar</button><pre><code># PowerShell - desde la raíz del repo
+Copy-Item -Recurse -Force ..\etapa-2\backend .
+Copy-Item -Recurse -Force ..\etapa-2\frontend .
+
+# Git Bash / Linux
+cp -r ../etapa-2/backend ../etapa-2/frontend .</code></pre></div>
+      </li>
+      <li>Validar local: <code>cd backend && pytest --cov=app</code> → ~30 % (FALLA gate de 80 %).</li>
+      <li>Validar local: <code>cd frontend && npm run test:coverage</code> → ~35 % (FALLA).</li>
+      <li>Commit y push: <code>git add . && git commit -m "etapa 2: CRUD" && git push -u origin feature/etapa-2-crud</code>.</li>
+      <li><strong>PR a develop</strong>: <code>ci-develop</code> es permisivo, pasa en verde. Mergear.</li>
+      <li><strong>PR de develop a master</strong>: <code>ci-master</code> es estricto y <strong>FALLA</strong> por cobertura y Quality Gate.</li>
+      <li>🖼 Capturar checks rojos y dashboard FAILED de Sonar.</li>
     </ol>
   </div>
 
   <div class="card">
-    <h3><span class="badge-stage pass">ETAPA 2</span> Aumentar cobertura</h3>
+    <h3><span class="badge-stage pass">ETAPA 3</span> Agregar los tests faltantes</h3>
     <ol>
-      <li>Desde <code>develop</code>, crear rama: <code>git checkout -b feature/etapa-2-aumentar-cobertura</code>.</li>
-      <li>Copiar los tests:
+      <li>Desde <code>develop</code> (con etapa 2 ya mergeada): <code>git checkout -b feature/etapa-3-tests</code>.</li>
+      <li>Aplicar el overlay:
         <div class="code-wrap"><button class="copy-btn">Copiar</button><pre><code># PowerShell
-Copy-Item -Recurse -Force .\aumentar-cobertura\* .\normal\
+Copy-Item -Recurse -Force ..\etapa-3\backend .
+Copy-Item -Recurse -Force ..\etapa-3\frontend .
 
 # Git Bash / Linux
-cp -r aumentar-cobertura/* normal/</code></pre></div>
+cp -r ../etapa-3/backend ../etapa-3/frontend .</code></pre></div>
       </li>
       <li>Validar local: <code>pytest --cov=app --cov-fail-under=80</code> debe pasar con ~96 %.</li>
       <li>Validar local: <code>npm run test:coverage</code> debe pasar con 100 %.</li>
-      <li>Commit y push. PR a develop → mergear → PR de develop a master.</li>
-      <li>Esta vez los 5 jobs de <code>ci-master</code> deben pasar y SonarCloud queda PASSED.</li>
-      <li>🖼 Capturar evidencia y mergear a master.</li>
+      <li>Commit, push, PR a develop, mergear.</li>
+      <li>El PR pendiente de develop → master se actualiza automáticamente y ahora <strong>PASA</strong> todos los checks.</li>
+      <li>🖼 Capturar dashboard PASSED de Sonar y merge a master.</li>
     </ol>
   </div>
 
@@ -993,30 +1034,30 @@ cp -r aumentar-cobertura/* normal/</code></pre></div>
   </div>
 
   <div class="card">
-    <h3>Tabla de las 20 capturas requeridas</h3>
+    <h3>Tabla de las 20 capturas requeridas (por etapa)</h3>
     <table>
-      <thead><tr><th>#</th><th>Paso</th><th>Qué debe verse</th></tr></thead>
+      <thead><tr><th>#</th><th>Etapa</th><th>Paso</th><th>Qué debe verse</th></tr></thead>
       <tbody>
-        <tr><td>1</td><td>Repositorio en GitHub</td><td>URL del repo público en el navegador y ramas <code>develop</code>+<code>master</code> visibles</td></tr>
-        <tr><td>2</td><td><code>docker compose ps</code></td><td>Los 4 servicios con STATUS healthy/running</td></tr>
-        <tr><td>3</td><td>Backend funcionando</td><td>Swagger UI en <code>localhost:8000/docs</code> con los endpoints CRUD</td></tr>
-        <tr><td>4</td><td>Frontend funcionando</td><td><code>localhost:5173</code> con al menos 3 tareas creadas</td></tr>
-        <tr><td>5</td><td>pgAdmin con datos</td><td>Tabla <code>tasks</code> con los registros creados visibles</td></tr>
-        <tr><td>6</td><td>Lint backend</td><td>Terminal con <code>ruff check app</code> ejecutado, sin errores</td></tr>
-        <tr><td>7</td><td>Lint frontend</td><td>Terminal con <code>npm run lint</code> ejecutado, sin errores</td></tr>
-        <tr><td>8</td><td>Cobertura backend etapa 1</td><td><code>pytest --cov</code> mostrando TOTAL &lt;80% y mensaje "Required test coverage of 80% not reached"</td></tr>
-        <tr><td>9</td><td>Cobertura frontend etapa 1</td><td><code>vitest run --coverage</code> con porcentajes &lt;80% y fallo de threshold</td></tr>
-        <tr><td>10</td><td>PR a develop verde</td><td>Pestaña Checks del PR con todos los jobs de <code>ci-develop</code> en ✓</td></tr>
-        <tr><td>11</td><td>Branch protection develop</td><td>Settings → Branches con la regla de <code>develop</code> y sus checks requeridos</td></tr>
-        <tr><td>12</td><td>Branch protection master</td><td>Settings → Branches con la regla de <code>master</code> y sus checks requeridos</td></tr>
-        <tr><td>13</td><td>PR develop → master FALLANDO</td><td>Pestaña Checks con cobertura y/o Sonar en ✗ rojo</td></tr>
-        <tr><td>14</td><td>SonarCloud FAILED</td><td>Dashboard del proyecto con Quality Gate "Failed" visible</td></tr>
-        <tr><td>15</td><td>Aplicación de aumentar-cobertura</td><td>Terminal con <code>git diff --stat</code> mostrando los archivos copiados</td></tr>
-        <tr><td>16</td><td>Cobertura backend etapa 2</td><td><code>pytest --cov</code> con TOTAL ≥80% y resultado exitoso</td></tr>
-        <tr><td>17</td><td>Cobertura frontend etapa 2</td><td><code>vitest run --coverage</code> con todos los thresholds en verde</td></tr>
-        <tr><td>18</td><td>PR develop → master PASANDO</td><td>Pestaña Checks con los 5 jobs en ✓</td></tr>
-        <tr><td>19</td><td>SonarCloud PASSED</td><td>Quality Gate "Passed", cobertura ≥80%, 0 bugs, 0 vulnerabilities</td></tr>
-        <tr><td>20</td><td>Merge a master</td><td>PR cerrado con badge "Merged" morado y commit en master</td></tr>
+        <tr><td>1</td><td>1</td><td>Repositorio en GitHub</td><td>URL del repo público en el navegador y ramas <code>develop</code>+<code>master</code> visibles</td></tr>
+        <tr><td>2</td><td>1</td><td>Branch protection develop</td><td>Settings → Branches con la regla de <code>develop</code> y checks requeridos</td></tr>
+        <tr><td>3</td><td>1</td><td>Branch protection master</td><td>Settings → Branches con la regla de <code>master</code> y checks requeridos</td></tr>
+        <tr><td>4</td><td>1</td><td>SONAR_TOKEN configurado</td><td>Settings → Secrets → Actions mostrando el secret SONAR_TOKEN</td></tr>
+        <tr><td>5</td><td>1</td><td>SonarCloud conectado</td><td>Dashboard del proyecto en SonarCloud (estado inicial PASSED, app trivial)</td></tr>
+        <tr><td>6</td><td>1</td><td><code>docker compose ps</code></td><td>Los 4 servicios con STATUS healthy/running</td></tr>
+        <tr><td>7</td><td>1</td><td>Backend funcionando</td><td>Swagger UI en <code>localhost:8000/docs</code> mostrando <code>/health</code></td></tr>
+        <tr><td>8</td><td>1</td><td>Frontend etapa 1</td><td><code>localhost:5173</code> mostrando "Laboratorio CI/CD" + texto de etapa 1</td></tr>
+        <tr><td>9</td><td>2</td><td>Aplicación overlay etapa-2</td><td>Terminal con <code>git diff --stat</code> tras aplicar overlay (muchos archivos)</td></tr>
+        <tr><td>10</td><td>2</td><td>Cobertura backend etapa 2</td><td><code>pytest --cov</code> mostrando TOTAL &lt;80% y "Required test coverage not reached"</td></tr>
+        <tr><td>11</td><td>2</td><td>Cobertura frontend etapa 2</td><td><code>vitest run --coverage</code> con porcentajes &lt;80% y fallo de threshold</td></tr>
+        <tr><td>12</td><td>2</td><td>PR feature/etapa-2 → develop verde</td><td>Pestaña Checks con todos los jobs de <code>ci-develop</code> en ✓</td></tr>
+        <tr><td>13</td><td>2</td><td>PR develop → master FALLANDO</td><td>Pestaña Checks con cobertura y/o Sonar en ✗ rojo</td></tr>
+        <tr><td>14</td><td>2</td><td>SonarCloud FAILED</td><td>Dashboard del proyecto con Quality Gate "Failed" visible</td></tr>
+        <tr><td>15</td><td>3</td><td>Frontend con tareas reales</td><td><code>localhost:5173</code> mostrando 3+ tareas creadas (alguna completada)</td></tr>
+        <tr><td>16</td><td>3</td><td>pgAdmin con datos</td><td>Tabla <code>tasks</code> con los registros creados visibles</td></tr>
+        <tr><td>17</td><td>3</td><td>Cobertura backend etapa 3</td><td><code>pytest --cov</code> con TOTAL ≥80% y resultado exitoso</td></tr>
+        <tr><td>18</td><td>3</td><td>Cobertura frontend etapa 3</td><td><code>vitest run --coverage</code> con todos los thresholds en verde</td></tr>
+        <tr><td>19</td><td>3</td><td>PR develop → master PASANDO</td><td>Pestaña Checks con los 5 jobs en ✓ y Sonar PASSED</td></tr>
+        <tr><td>20</td><td>3</td><td>Merge a master</td><td>PR cerrado con badge "Merged" morado y commit en master</td></tr>
       </tbody>
     </table>
   </div>

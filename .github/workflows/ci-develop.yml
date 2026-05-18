@@ -38,7 +38,7 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - name: Instalar dependencias
         working-directory: frontend
-        run: npm ci
+        run: npm install --no-audit --no-fund
       - name: Ejecutar eslint
         working-directory: frontend
         run: npm run lint
@@ -72,7 +72,7 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - name: Instalar dependencias
         working-directory: frontend
-        run: npm ci
+        run: npm install --no-audit --no-fund
       - name: Build
         working-directory: frontend
         run: npm run build
