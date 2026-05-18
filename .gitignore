@@ -1,0 +1,40 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.venv/
+venv/
+
+# --- Node ---
+node_modules/
+dist/
+build/
+coverage/
+*.log
+.npm/
+.pnpm-debug.log*
+*.tsbuildinfo
+# Excluido: el lockfile se regenera en cada install para evitar bug de rollup
+# con dependencias opcionales especificas de SO (cli/issues/4828)
+package-lock.json
+
+# --- IDE / OS ---
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# --- Entorno ---
+.env
+.env.local
+*.local
+
+# --- Sonar ---
+.scannerwork/
+
+# --- Ruff cache ---
+.ruff_cache/

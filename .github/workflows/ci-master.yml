@@ -1,0 +1,132 @@
+name: ci-master
+
+# Se ejecuta para PRs que vayan a `master` (normalmente desde `develop`).
+on:
+  pull_request:
+    branches: [master, main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  lint:
+    name: Lint (ruff + eslint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12.10"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package.json
+      - name: Instalar deps backend
+        working-directory: backend
+        run: pip install -r requirements.txt
+      - name: Ruff
+        working-directory: backend
+        run: ruff check app
+      - name: Instalar deps frontend
+        working-directory: frontend
+        run: npm install --no-audit --no-fund
+      - name: ESLint
+        working-directory: frontend
+        run: npm run lint
+
+  test-backend-coverage:
+    name: Backend coverage (>=80%)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Sonar lo recomienda
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12.10"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Instalar dependencias
+        working-directory: backend
+        run: pip install -r requirements.txt
+      - name: pytest con cobertura
+        working-directory: backend
+        run: pytest --cov=app --cov-report=xml --cov-report=term --cov-fail-under=80
+      - name: Fix coverage paths para Sonar (prefija backend/app/)
+        # pytest-cov con `source=["app"]` omite el prefijo `app/`. Sonar lee las
+        # rutas relativas al proyecto y necesita `backend/app/...`.
+        run: sed -i 's|filename="|filename="backend/app/|g' backend/coverage.xml
+      - name: Subir reporte como artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-backend
+          path: backend/coverage.xml
+
+  test-frontend-coverage:
+    name: Frontend coverage (>=80%)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package.json
+      - name: Instalar dependencias
+        working-directory: frontend
+        run: npm install --no-audit --no-fund
+      - name: Vitest con cobertura
+        working-directory: frontend
+        run: npm run test:coverage
+      - name: Subir reporte como artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-frontend
+          path: frontend/coverage/
+
+  sonarcloud:
+    name: SonarCloud Quality Gate
+    # Corre siempre que los jobs de cobertura hayan terminado (pasen o fallen)
+    # para que el Quality Gate evalue tambien escenarios con cobertura baja.
+    needs: [test-backend-coverage, test-frontend-coverage]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Descargar reporte backend
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-backend
+          path: backend
+        continue-on-error: true
+      - name: Descargar reporte frontend
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-frontend
+          path: frontend/coverage
+        continue-on-error: true
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  docker-build:
+    name: Build de imagenes Docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build con docker compose
+        run: docker compose build

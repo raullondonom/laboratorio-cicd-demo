@@ -1,0 +1,1901 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guía Interactiva — Laboratorio CI/CD</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #f6f8fb; --surface: #ffffff; --text: #1d2433; --muted: #5b6779;
+    --primary: #2d7ff9; --primary-dark: #1a63d0; --border: #e1e5ec;
+    --code-bg: #1e2530; --code-text: #e6edf3; --ok: #16a34a; --bad: #dc2626;
+    --warn: #d97706; --tag: #eef3ff; --shadow: 0 1px 4px rgba(0,0,0,0.06);
+    --capture: #7c3aed; --capture-bg: #f5f3ff;
+  }
+  [data-theme="dark"] {
+    --bg: #0f1419; --surface: #1a1f29; --text: #e6edf3; --muted: #8b96a8;
+    --primary: #4d9bff; --primary-dark: #2d7ff9; --border: #2a313d;
+    --code-bg: #0a0e14; --code-text: #cdd9e5; --tag: #1d2533; --shadow: 0 1px 4px rgba(0,0,0,0.4);
+    --capture: #a78bfa; --capture-bg: #1e1b3a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", system-ui, Roboto, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.6; }
+  header { background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 1rem 2rem; position: sticky; top: 0; z-index: 100;
+    display: flex; align-items: center; gap: 1rem; box-shadow: var(--shadow); }
+  header h1 { margin: 0; font-size: 1.2rem; flex: 1; }
+  header button { background: none; border: 1px solid var(--border); color: var(--text);
+    padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
+  header button:hover { background: var(--bg); }
+  /* Layout principal: nav izquierda + contenido + panel derecho */
+  .layout { display: grid; grid-template-columns: 220px minmax(0, 1fr) 280px; gap: 0.75rem;
+    margin: 0; padding: 0.6rem; align-items: start; }
+  .layout.left-collapsed  { grid-template-columns: 60px  minmax(0, 1fr) 280px; }
+  .layout.right-collapsed { grid-template-columns: 220px minmax(0, 1fr) 200px; }
+  .layout.left-collapsed.right-collapsed { grid-template-columns: 60px minmax(0, 1fr) 200px; }
+  main { min-width: 0; }
+  /* Bloque común para ambos asides */
+  aside.leftnav, aside.sidebar {
+    position: sticky; top: 80px; max-height: calc(100vh - 100px); overflow-y: auto;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 0.6rem 0.7rem; box-shadow: var(--shadow); font-size: 0.88rem;
+    transition: padding .2s;
+  }
+  aside h3 { margin: 0; font-size: 0.82rem; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.05em; }
+  .aside-header { display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 0.45rem; gap: 0.4rem; }
+  /* Nav izquierda (saltar a sección) */
+  aside.leftnav nav { display: flex; flex-direction: column; gap: 0.1rem; }
+  aside.leftnav nav a { display: block; padding: 0.35rem 0.6rem; text-decoration: none;
+    color: var(--text); border-radius: 6px; transition: background .15s;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  aside.leftnav nav a:hover { background: var(--bg); }
+  aside.leftnav nav a.active { background: var(--primary); color: white; font-weight: 600; }
+  /* Estado COLAPSADO del menú izquierdo: muestra solo el número de sección */
+  aside.leftnav.collapsed { padding: 0.5rem 0.3rem; }
+  aside.leftnav.collapsed .aside-header h3 { display: none; }
+  aside.leftnav.collapsed .aside-header { justify-content: center; margin-bottom: 0.4rem; }
+  aside.leftnav.collapsed nav a { padding: 0.45rem 0; text-align: center;
+    font-weight: 600; font-size: 0.9rem; }
+  aside.leftnav.collapsed nav a .nav-num { display: inline; }
+  aside.leftnav.collapsed nav a .nav-label { display: none; }
+  aside.leftnav:not(.collapsed) nav a .nav-num { font-weight: 600; margin-right: 0.15rem; }
+  /* Panel derecho (progreso) */
+  .sidebar-header { display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 0.45rem; gap: 0.4rem; }
+  .sidebar-header h3 { margin: 0; }
+  .collapse-btn { background: none; border: 1px solid var(--border); color: var(--text);
+    width: 26px; height: 26px; border-radius: 6px; cursor: pointer; font-size: 0.85rem;
+    display: flex; align-items: center; justify-content: center; padding: 0; line-height: 1; }
+  .collapse-btn:hover { background: var(--bg); }
+  aside.sidebar nav.progress-list { display: flex; flex-direction: column; gap: 0.15rem; }
+  aside.sidebar nav.progress-list a { display: flex; justify-content: space-between;
+    align-items: center; padding: 0.35rem 0.6rem; text-decoration: none; color: var(--text);
+    border-radius: 6px; transition: background .15s; gap: 0.4rem; }
+  aside.sidebar nav.progress-list a:hover { background: var(--bg); }
+  aside.sidebar nav.progress-list a.active { background: var(--primary); color: white; font-weight: 600; }
+  aside.sidebar nav.progress-list a .sec-name { flex: 1; min-width: 0; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; }
+  aside.sidebar nav.progress-list a .sec-progress { font-size: 0.72rem; opacity: 0.8;
+    flex-shrink: 0; font-variant-numeric: tabular-nums; }
+  aside.sidebar nav.progress-list a.complete::after { content: "✓"; color: var(--ok);
+    font-weight: bold; margin-left: 0.25rem; flex-shrink: 0; }
+  aside.sidebar nav.progress-list a.active.complete::after { color: white; }
+  .global-progress { margin-bottom: 0.6rem; padding: 0.5rem 0.6rem; background: var(--bg);
+    border-radius: 8px; }
+  .global-progress .label { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.35rem;
+    display: flex; justify-content: space-between; align-items: baseline; }
+  .global-progress .label strong { color: var(--text); font-size: 1rem; }
+  /* Estado COLAPSADO del panel derecho: oculta los conteos n/total y la barra,
+     pero deja nombre + porcentaje visibles */
+  aside.sidebar.collapsed .global-progress { padding: 0.4rem 0.6rem; }
+  aside.sidebar.collapsed .global-progress .progress { display: none; }
+  aside.sidebar.collapsed nav.progress-list a { padding: 0.3rem 0.55rem; font-size: 0.82rem; }
+  aside.sidebar.collapsed .sec-progress-detail { display: none; }
+  aside.sidebar:not(.collapsed) .sec-progress-pct { display: none; }
+  section { display: none; }
+  section.active { display: block; animation: fadein .25s; }
+  @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  h2 { color: var(--primary); margin-top: 0; padding-bottom: 0.4rem; border-bottom: 2px solid var(--primary); }
+  h3 { color: var(--text); margin-top: 1.8rem; }
+  h4 { color: var(--text); margin-top: 1.2rem; }
+  p, ul, ol { margin: 0.6rem 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin: 0.25rem 0; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1.25rem 1.5rem; margin: 1rem 0; box-shadow: var(--shadow); }
+  .card h3:first-child, .card h4:first-child { margin-top: 0; }
+  .pill { display: inline-block; padding: 0.15rem 0.6rem; border-radius: 99px;
+    background: var(--tag); color: var(--primary); font-size: 0.75rem; font-weight: 600;
+    margin-right: 0.4rem; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: 0.92rem; }
+  th, td { border: 1px solid var(--border); padding: 0.55rem 0.75rem; text-align: left; vertical-align: top; }
+  th { background: var(--tag); color: var(--text); }
+  .code-wrap { position: relative; margin: 0.6rem 0; }
+  pre { background: var(--code-bg); color: var(--code-text); padding: 1rem 1.25rem;
+    border-radius: 8px; overflow-x: auto; font-size: 0.85rem; line-height: 1.55; margin: 0; }
+  pre code { font-family: "Consolas", "Monaco", "Courier New", monospace; }
+  .copy-btn { position: absolute; top: 0.5rem; right: 0.5rem; background: rgba(255,255,255,0.1);
+    color: var(--code-text); border: 1px solid rgba(255,255,255,0.2); padding: 0.25rem 0.6rem;
+    border-radius: 5px; cursor: pointer; font-size: 0.75rem; }
+  .copy-btn:hover { background: rgba(255,255,255,0.2); }
+  .copy-btn.copied { background: var(--ok); color: white; border-color: var(--ok); }
+  .callout { padding: 0.8rem 1.1rem; border-radius: 8px; margin: 1rem 0;
+    border-left: 4px solid var(--primary); background: var(--tag); }
+  .callout.warn { border-left-color: var(--warn); background: #fff7ed; color: #7c2d12; }
+  [data-theme="dark"] .callout.warn { background: #2a1a05; color: #fbbf24; }
+  .callout.bad { border-left-color: var(--bad); background: #fef2f2; color: #7f1d1d; }
+  [data-theme="dark"] .callout.bad { background: #2a0a0a; color: #fca5a5; }
+  .callout.ok { border-left-color: var(--ok); background: #f0fdf4; color: #14532d; }
+  [data-theme="dark"] .callout.ok { background: #052e16; color: #86efac; }
+  .check { display: flex; align-items: flex-start; gap: 0.6rem; padding: 0.4rem 0;
+    border-bottom: 1px dashed var(--border); }
+  .check:last-child { border-bottom: none; }
+  .check input { margin-top: 0.35rem; cursor: pointer; flex-shrink: 0; }
+  .check.done > label > span { text-decoration: line-through; color: var(--muted); }
+  .check label { cursor: pointer; flex: 1; }
+  .mermaid { background: white; padding: 1rem; border-radius: 8px; margin: 1rem 0; text-align: center; }
+  [data-theme="dark"] .mermaid { background: #ffffff; }
+  .progress { background: var(--border); height: 8px; border-radius: 99px; overflow: hidden; margin: 0; }
+  .progress > div { background: var(--primary); height: 100%; transition: width .25s; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  kbd { background: var(--border); padding: 0.1rem 0.4rem; border-radius: 4px;
+    font-family: monospace; font-size: 0.85rem; }
+  .badge-stage { display: inline-block; padding: 0.2rem 0.5rem; border-radius: 4px;
+    font-size: 0.75rem; font-weight: 700; }
+  .badge-stage.fail { background: var(--bad); color: white; }
+  .badge-stage.pass { background: var(--ok); color: white; }
+  details { margin: 0.6rem 0; padding: 0.6rem 1rem; background: var(--bg); border-radius: 6px; }
+  summary { cursor: pointer; font-weight: 600; }
+  /* Bloque "Captura requerida" — marca un punto donde se debe tomar una captura */
+  .capture { display: flex; gap: 0.75rem; align-items: flex-start; margin: 1rem 0;
+    padding: 0.9rem 1.1rem; background: var(--capture-bg); border-left: 4px solid var(--capture);
+    border-radius: 8px; }
+  .capture .cap-num { background: var(--capture); color: white; font-weight: 700;
+    font-size: 0.85rem; padding: 0.25rem 0.55rem; border-radius: 6px; flex-shrink: 0; }
+  .capture .cap-body { flex: 1; }
+  .capture .cap-title { font-weight: 600; color: var(--capture); margin-bottom: 0.2rem; }
+  .capture .cap-desc { font-size: 0.9rem; color: var(--text); }
+  [data-theme="dark"] .capture .cap-desc { color: var(--text); }
+  /* Navegación prev/next al final de cada sección */
+  .section-nav { display: flex; justify-content: space-between; gap: 1rem; margin-top: 2rem;
+    padding-top: 1.5rem; border-top: 1px solid var(--border); }
+  .section-nav button { background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); padding: 0.7rem 1.1rem; border-radius: 8px; cursor: pointer;
+    font-size: 0.9rem; display: flex; flex-direction: column; align-items: flex-start; gap: 0.15rem;
+    min-width: 0; flex: 1; max-width: 48%; transition: all .15s; }
+  .section-nav button:hover:not(:disabled) { background: var(--bg); border-color: var(--primary); }
+  .section-nav button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .section-nav button .nav-hint { font-size: 0.72rem; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.04em; }
+  .section-nav button .nav-title { font-weight: 600; }
+  .section-nav .prev { align-items: flex-start; text-align: left; }
+  .section-nav .next { align-items: flex-end; text-align: right; margin-left: auto; }
+  /* Responsive */
+  @media (max-width: 1200px) {
+    .layout, .layout.right-collapsed { grid-template-columns: 200px minmax(0, 1fr); }
+    aside.sidebar { display: none; }
+  }
+  @media (max-width: 780px) {
+    .layout, .layout.right-collapsed { grid-template-columns: 1fr; padding: 1rem; }
+    aside.leftnav { position: static; max-height: none; order: -1; }
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+  /* Imprimir */
+  @media print {
+    header, aside.sidebar, aside.leftnav, .copy-btn, .section-nav,
+    #resetProgress, #printBtn, #themeToggle { display: none !important; }
+    .layout, .layout.right-collapsed { grid-template-columns: 1fr; padding: 0; }
+    section { display: block !important; page-break-after: always; }
+    .capture { break-inside: avoid; }
+    .card { break-inside: avoid; box-shadow: none; }
+  }
+</style>
+</head>
+<body data-theme="light">
+
+<header>
+  <h1>Laboratorio CI/CD — Guía Interactiva</h1>
+  <button id="resetProgress" title="Borrar checks guardados">Reset progreso</button>
+  <button id="printBtn" title="Imprimir o guardar como PDF">Imprimir / PDF</button>
+  <button id="themeToggle" title="Cambiar tema">🌙</button>
+</header>
+
+<div class="layout" id="layout">
+
+<aside class="leftnav" id="leftnav" aria-label="Navegación de secciones">
+  <div class="aside-header">
+    <h3>Secciones</h3>
+    <button class="collapse-btn" id="collapseLeftBtn" title="Colapsar / expandir" aria-label="Colapsar o expandir menú de secciones">«</button>
+  </div>
+  <nav id="leftnavNav" aria-label="Índice de secciones">
+    <a href="#descripcion" data-tab="descripcion" class="active"><span class="nav-num">1.</span><span class="nav-label"> Descripción</span></a>
+    <a href="#entrega" data-tab="entrega"><span class="nav-num">2.</span><span class="nav-label"> Entrega</span></a>
+    <a href="#preparacion" data-tab="preparacion"><span class="nav-num">3.</span><span class="nav-label"> Preparación</span></a>
+    <a href="#arquitectura" data-tab="arquitectura"><span class="nav-num">4.</span><span class="nav-label"> Arquitectura</span></a>
+    <a href="#gitflow" data-tab="gitflow"><span class="nav-num">5.</span><span class="nav-label"> Git Flow</span></a>
+    <a href="#ci-cd" data-tab="ci-cd"><span class="nav-num">6.</span><span class="nav-label"> CI vs CD</span></a>
+    <a href="#lint" data-tab="lint"><span class="nav-num">7.</span><span class="nav-label"> Lint</span></a>
+    <a href="#tests" data-tab="tests"><span class="nav-num">8.</span><span class="nav-label"> Pruebas</span></a>
+    <a href="#cobertura" data-tab="cobertura"><span class="nav-num">9.</span><span class="nav-label"> Cobertura</span></a>
+    <a href="#sonar" data-tab="sonar"><span class="nav-num">10.</span><span class="nav-label"> SonarCloud</span></a>
+    <a href="#actions" data-tab="actions"><span class="nav-num">11.</span><span class="nav-label"> GitHub Actions</span></a>
+    <a href="#branch-protection" data-tab="branch-protection"><span class="nav-num">12.</span><span class="nav-label"> Branch Protection</span></a>
+    <a href="#etapas" data-tab="etapas"><span class="nav-num">13.</span><span class="nav-label"> Las 3 Etapas</span></a>
+    <a href="#troubleshoot" data-tab="troubleshoot"><span class="nav-num">14.</span><span class="nav-label"> Problemas</span></a>
+  </nav>
+</aside>
+
+<main>
+
+<!-- ============================================================== -->
+<section id="descripcion" class="active">
+  <h2>1. Descripción del laboratorio</h2>
+
+  <div class="card">
+    <h3>Objetivo general</h3>
+    <p>Practicar de extremo a extremo un pipeline moderno de <strong>integración continua (CI)</strong>
+    y <strong>análisis estático de código</strong> sobre una aplicación real con backend, frontend y
+    base de datos. Al terminar, la pareja debe ser capaz de:</p>
+    <ul>
+      <li>Levantar un stack multicontenedor con <code>docker compose</code>.</li>
+      <li>Configurar un repositorio de GitHub con ramas <code>develop</code> y <code>master</code> protegidas.</li>
+      <li>Leer y entender un workflow de <strong>GitHub Actions</strong> que ejecuta lint, pruebas, cobertura y análisis Sonar (los workflows vienen con el repo).</li>
+      <li>Conectar el repositorio a <strong>SonarCloud</strong>, configurar el secret <code>SONAR_TOKEN</code> y interpretar el <strong>Quality Gate</strong>.</li>
+      <li>Vivir el ciclo PR → review → merge y entender por qué un PR puede ser rechazado por una métrica.</li>
+      <li>Aumentar la cobertura de pruebas hasta superar el umbral exigido (80%).</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Modalidad y duración</h3>
+    <ul>
+      <li><span class="pill">Parejas</span> dos integrantes por entrega.</li>
+      <li><span class="pill">~10 horas</span> estimadas (incluye lectura, configuración, ejecución y redacción del informe).</li>
+      <li><span class="pill">Entregable</span> un único PDF por pareja (ver sección <em>Entrega</em>).</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Estructura del kit del laboratorio</h3>
+    <p>El kit consta de un repositorio Git y dos carpetas overlay <strong>fuera</strong> del repositorio:</p>
+    <pre style="background:var(--code-bg);color:var(--code-text);padding:1rem;border-radius:8px;overflow-x:auto;font-size:0.85rem"><code>Laboratorio CI CD/             ← carpeta contenedora (NO es un repositorio)
+├── laboratorio-cicd-demo/     ← REPO GIT (el que clonan los estudiantes, Etapa 1)
+│   ├── backend/               ← FastAPI: solo /health
+│   ├── frontend/              ← React: solo pantalla "Hola"
+│   ├── docker-compose.yml
+│   ├── guia.html              ← este documento
+│   ├── scripts/setup-windows.ps1
+│   ├── sonar-project.properties
+│   └── .github/workflows/     ← ci-develop.yml y ci-master.yml
+├── etapa-2/                   ← overlay para Etapa 2 (CRUD)
+└── etapa-3/                   ← overlay para Etapa 3 (tests del CRUD)</code></pre>
+    <p>El profesor entrega los tres elementos. Las etapas <strong>se aplican como overlay</strong>:
+    se copia el contenido de la carpeta <code>etapa-N/</code> sobre la raíz del repositorio,
+    se hace commit y se abre el PR correspondiente.</p>
+  </div>
+
+  <div class="card">
+    <h3>Las 3 etapas en una tabla</h3>
+    <table>
+      <thead><tr><th>Etapa</th><th>Qué hace la pareja</th><th>Resultado esperado</th></tr></thead>
+      <tbody>
+        <tr><td><strong>1. Setup</strong></td><td>Clonar, conectar SonarCloud, configurar secret y branch protection. La app trivial ya tiene 100% de cobertura.</td><td>Repo configurado; pipelines pasan en verde.</td></tr>
+        <tr><td><strong>2. CRUD</strong></td><td>Aplicar overlay <code>etapa-2/</code> que agrega el código real <em>sin</em> tests para él.</td><td>PR a <code>develop</code> ✅. PR a <code>master</code> ❌ (coverage &lt;80%, Sonar FAILED).</td></tr>
+        <tr><td><strong>3. Tests</strong></td><td>Aplicar overlay <code>etapa-3/</code> que agrega los tests del CRUD.</td><td>PR a <code>develop</code> ✅. PR a <code>master</code> ✅ (coverage ~96%, Sonar PASSED).</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Criterios de evaluación</h3>
+    <p>El laboratorio se evalúa <strong>exclusivamente con el PDF de entrega</strong>. Cada paso técnicamente
+    verificable debe llevar:</p>
+    <ol>
+      <li>Una <strong>captura de pantalla completa</strong> (NO recortes — debe verse barra de tareas, hora, navegador completo).</li>
+      <li>Una <strong>explicación escrita de mínimo 3 líneas</strong> que diga: qué hiciste, qué muestra la captura, y por qué eso demuestra que el paso se cumplió.</li>
+    </ol>
+    <p>Hay <strong>20 pasos verificables</strong> marcados a lo largo de esta guía con el bloque morado
+    <em>"📸 Captura N"</em>. Cada uno vale 1 punto. Si falta la captura o la explicación es trivial, el paso
+    no suma.</p>
+    <div class="callout">
+      Las instalaciones, la creación de cuentas de GitHub/SonarCloud y la ejecución del script de setup
+      <strong>no</strong> requieren captura — son preparación, no parte de la evaluación.
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Checklist de comprensión</h3>
+    <div class="checklist" data-section="descripcion">
+      <div class="check"><input type="checkbox" id="desc1"><label for="desc1"><span>Entiendo el objetivo del laboratorio y qué debo poder hacer al final</span></label></div>
+      <div class="check"><input type="checkbox" id="desc2"><label for="desc2"><span>Sé en qué consisten las 3 etapas y qué resultado esperar de cada PR</span></label></div>
+      <div class="check"><input type="checkbox" id="desc3"><label for="desc3"><span>Comprendo el criterio de evaluación (capturas + explicación de ≥3 líneas)</span></label></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================== -->
+<section id="entrega">
+  <h2>2. Entrega</h2>
+
+  <p>Esta sección describe <strong>qué deben entregar</strong> al final del laboratorio. Léela antes de
+  empezar para tener claro hacia dónde vas: a medida que avanzas en la guía verás bloques
+  <span style="color:var(--capture);font-weight:600">📸 Captura N</span> que marcan los 20 momentos
+  en que debes tomar evidencia.</p>
+
+  <div class="card">
+    <h3>Formato del informe</h3>
+    <ul>
+      <li>Archivo único <strong>PDF</strong> (no Word, no carpetas con varios archivos).</li>
+      <li>Nombre del archivo: <code>laboratorio-cicd_&lt;apellido1&gt;_&lt;apellido2&gt;.pdf</code>.</li>
+      <li>Tamaño máximo recomendado: 25 MB. Si pesa más, baja la calidad de las imágenes al exportar.</li>
+      <li>Idioma: <strong>español</strong>, con tildes correctas.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Estructura obligatoria del PDF</h3>
+    <ol>
+      <li><strong>Portada</strong> — una página. Debe incluir:
+        <ul>
+          <li>Nombre de la asignatura, semestre y nombre del profesor.</li>
+          <li>Título: "Laboratorio de Integración Continua y Análisis Estático".</li>
+          <li>Fecha de entrega.</li>
+          <li>Nombres completos e identificación de los dos integrantes.</li>
+        </ul>
+      </li>
+      <li><strong>Resumen ejecutivo</strong> (½ página) — 5 a 8 líneas explicando qué hicieron, qué stack usaron y qué aprendieron en lenguaje propio (no copiar texto de la guía).</li>
+      <li><strong>URL del repositorio público</strong> en GitHub, como hipervínculo clicable.</li>
+      <li><strong>URL del proyecto en SonarCloud</strong>, como hipervínculo clicable.</li>
+      <li><strong>20 capturas con explicación</strong>, en el orden de la tabla más abajo. Cada captura ocupa una página o más.</li>
+      <li><strong>Conclusiones individuales</strong> — un párrafo por integrante (mínimo 6 líneas cada uno). Qué fue lo más difícil, qué aprendieron, qué harían distinto.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h3>Cómo se presenta cada captura</h3>
+    <p>Para cada uno de los 20 puntos:</p>
+    <ol>
+      <li><strong>Título</strong> con el número y nombre corto del paso (ej. "Captura 5 — SonarCloud conectado").</li>
+      <li><strong>Imagen</strong> ocupando el ancho de página, legible.</li>
+      <li><strong>Explicación de mínimo 3 líneas</strong> debajo de la imagen, respondiendo:
+        <ul>
+          <li>¿Qué hicimos para llegar a esta pantalla?</li>
+          <li>¿Qué se está viendo en la captura?</li>
+          <li>¿Por qué esto demuestra que el paso quedó completado?</li>
+        </ul>
+      </li>
+    </ol>
+    <div class="callout warn">
+      <strong>Capturas inválidas</strong> (no suman punto): recortes que omiten barra de tareas,
+      capturas borrosas o cropeadas, capturas con texto cubierto, capturas de otra pareja, capturas con la hora del sistema visiblemente
+      anterior a la fecha de inicio del laboratorio.
+    </div>
+    <p><strong>Cómo capturar pantalla completa en Windows:</strong></p>
+    <ul>
+      <li><kbd>Win</kbd> + <kbd>Print Screen</kbd> guarda la pantalla completa en <code>Imágenes/Capturas de pantalla/</code>.</li>
+      <li><kbd>Win</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> abre la herramienta de recorte — usa <em>"Recorte de ventana completa"</em> o <em>"Recorte de pantalla completa"</em>, NO el modo libre.</li>
+      <li>Asegúrate de que se vea la <strong>barra de tareas con la hora</strong> y la <strong>URL completa</strong> del navegador (si aplica).</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Las 20 capturas que se calificarán</h3>
+    <p>Esta es la lista maestra. Cada captura aparece <em>también</em> marcada en su lugar dentro de la
+    guía con su bloque morado correspondiente, donde describe en detalle qué debe verse.</p>
+    <table>
+      <thead><tr><th>#</th><th>Sección</th><th>Etapa</th><th>Paso</th><th>Qué debe verse</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>5. Git Flow</td><td>1</td><td>Repositorio creado en GitHub</td><td>URL del repo público con badge <em>Public</em> y selector de ramas mostrando <code>master</code> y <code>develop</code></td></tr>
+        <tr><td>2</td><td>10. SonarCloud</td><td>1</td><td>SonarCloud conectado</td><td>Página del proyecto en SonarCloud tras importarlo (Waiting for first analysis o similar)</td></tr>
+        <tr><td>3</td><td>10. SonarCloud</td><td>1</td><td>SONAR_TOKEN configurado</td><td>Settings → Secrets → Actions del repo con el secret <code>SONAR_TOKEN</code></td></tr>
+        <tr><td>4</td><td>12. Branch Protection</td><td>1</td><td>Branch protection develop</td><td>Settings → Branches con la regla de <code>develop</code> y sus 4 checks</td></tr>
+        <tr><td>5</td><td>12. Branch Protection</td><td>1</td><td>Branch protection master</td><td>Settings → Branches con la regla de <code>master</code> y sus 5 checks</td></tr>
+        <tr><td>6</td><td>13. Etapas — Etapa 1</td><td>1</td><td><code>docker compose ps</code></td><td>Los 4 servicios con STATUS healthy/running</td></tr>
+        <tr><td>7</td><td>13. Etapas — Etapa 1</td><td>1</td><td>Backend Etapa 1</td><td>Swagger UI en <code>localhost:8000/docs</code> mostrando solo <code>/health</code></td></tr>
+        <tr><td>8</td><td>13. Etapas — Etapa 1</td><td>1</td><td>Frontend Etapa 1</td><td><code>localhost:5173</code> con la pantalla mínima de Etapa 1</td></tr>
+        <tr><td>9</td><td>13. Etapas — Etapa 2</td><td>2</td><td>Overlay etapa-2 aplicado</td><td>Terminal con <code>git diff --stat</code> tras aplicar overlay</td></tr>
+        <tr><td>10</td><td>13. Etapas — Etapa 2</td><td>2</td><td>Cobertura backend FALLA</td><td><code>pytest --cov</code> con TOTAL &lt;80% y "Required test coverage not reached"</td></tr>
+        <tr><td>11</td><td>13. Etapas — Etapa 2</td><td>2</td><td>Cobertura frontend FALLA</td><td><code>vitest run --coverage</code> con porcentajes &lt;80%</td></tr>
+        <tr><td>12</td><td>13. Etapas — Etapa 2</td><td>2</td><td>PR feature/etapa-2 → develop verde</td><td>Checks del PR con todos los jobs de <code>ci-develop</code> en ✓</td></tr>
+        <tr><td>13</td><td>13. Etapas — Etapa 2</td><td>2</td><td>PR develop → master FALLANDO</td><td>Checks con cobertura y/o Sonar en ✗ rojo</td></tr>
+        <tr><td>14</td><td>13. Etapas — Etapa 2</td><td>2</td><td>SonarCloud FAILED</td><td>Dashboard de Sonar con Quality Gate "Failed"</td></tr>
+        <tr><td>15</td><td>13. Etapas — Etapa 3</td><td>3</td><td>Frontend con tareas reales</td><td><code>localhost:5173</code> con 3+ tareas creadas (alguna completada)</td></tr>
+        <tr><td>16</td><td>13. Etapas — Etapa 3</td><td>3</td><td>pgAdmin con datos</td><td>Tabla <code>tasks</code> con los registros visibles</td></tr>
+        <tr><td>17</td><td>13. Etapas — Etapa 3</td><td>3</td><td>Cobertura backend PASA</td><td><code>pytest --cov</code> con TOTAL ≥80%</td></tr>
+        <tr><td>18</td><td>13. Etapas — Etapa 3</td><td>3</td><td>Cobertura frontend PASA</td><td><code>vitest run --coverage</code> con thresholds en verde</td></tr>
+        <tr><td>19</td><td>13. Etapas — Etapa 3</td><td>3</td><td>PR develop → master PASANDO</td><td>Checks con los 5 jobs en ✓ y Sonar PASSED</td></tr>
+        <tr><td>20</td><td>13. Etapas — Etapa 3</td><td>3</td><td>Merge a master + Sonar PASSED</td><td>PR cerrado <strong>Merged</strong> y dashboard de Sonar en verde</td></tr>
+      </tbody>
+    </table>
+    <p>El orden de la tabla coincide con el orden en que aparecen leyendo la guía de arriba abajo — así no hay que saltar entre secciones.</p>
+  </div>
+
+  <div class="card">
+    <h3>Rúbrica</h3>
+    <table>
+      <thead><tr><th>Componente</th><th>Puntos</th><th>Cómo se otorgan</th></tr></thead>
+      <tbody>
+        <tr><td>20 capturas con explicación</td><td>20</td><td>1 punto por captura completa (imagen válida + explicación de ≥3 líneas). 0 si falta una de las dos.</td></tr>
+        <tr><td>Portada y resumen ejecutivo</td><td>0,5</td><td>Datos correctos y resumen en lenguaje propio.</td></tr>
+        <tr><td>URLs (repo + Sonar) clicables</td><td>0,5</td><td>Hipervínculos funcionales en el PDF.</td></tr>
+        <tr><td>Conclusiones individuales</td><td>1,0</td><td>0,5 por integrante. Mínimo 6 líneas, sin copia entre ellos.</td></tr>
+        <tr><td>Penalización por trampa</td><td>−todo</td><td>Capturas alteradas o de otra pareja anulan la entrega completa.</td></tr>
+      </tbody>
+    </table>
+    <p>Total: <strong>22 puntos</strong>, ponderados según el plan del curso.</p>
+  </div>
+
+  <div class="card">
+    <h3>Checklist final antes de entregar</h3>
+    <div class="checklist" data-section="entrega">
+      <div class="check"><input type="checkbox" id="e1"><label for="e1"><span>El repo en GitHub es público</span></label></div>
+      <div class="check"><input type="checkbox" id="e2"><label for="e2"><span>Las 20 capturas están en el orden correcto</span></label></div>
+      <div class="check"><input type="checkbox" id="e3"><label for="e3"><span>Cada captura tiene su explicación (≥3 líneas)</span></label></div>
+      <div class="check"><input type="checkbox" id="e4"><label for="e4"><span>Todas las capturas son de pantalla completa (no recortes)</span></label></div>
+      <div class="check"><input type="checkbox" id="e5"><label for="e5"><span>La portada incluye nombres, identificación, curso y fecha</span></label></div>
+      <div class="check"><input type="checkbox" id="e6"><label for="e6"><span>Las URLs del repo y de SonarCloud están como hipervínculo clicable</span></label></div>
+      <div class="check"><input type="checkbox" id="e7"><label for="e7"><span>Cada integrante escribió su conclusión personal (≥6 líneas)</span></label></div>
+      <div class="check"><input type="checkbox" id="e8"><label for="e8"><span>El PDF está nombrado correctamente y pesa menos de 25 MB</span></label></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================== -->
+<section id="preparacion">
+  <h2>3. Preparación del entorno</h2>
+
+  <div class="card">
+    <h3>Requisitos previos</h3>
+    <ul>
+      <li>Windows 10/11 con permisos para instalar software (no se necesita admin total, pero sí UAC).</li>
+      <li>Docker Desktop con WSL2 activado y corriendo.</li>
+      <li>Acceso a internet (descarga de ~200 MB durante el setup).</li>
+      <li>Cuenta de GitHub (gratuita) — ver instrucciones más abajo.</li>
+      <li>Cuenta de SonarCloud (gratuita, login con GitHub) — ver instrucciones más abajo.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Crear cuenta de GitHub</h3>
+    <p>Si ya tienen cuenta, salten este paso. Si no:</p>
+    <ol>
+      <li>Entrar a <a href="https://github.com/signup" target="_blank">github.com/signup</a>.</li>
+      <li>Ingresar un correo personal (no uno corporativo que vayan a perder al graduarse).</li>
+      <li>Crear una contraseña fuerte y elegir un <em>username</em>. <strong>Este username queda en la URL de todos sus repos</strong>; eligan algo profesional, suelen quedar en el CV.</li>
+      <li>Verificar el correo (les llega un código).</li>
+      <li>Saltar la encuesta de personalización (<em>Skip</em>) y elegir el plan <strong>Free</strong>.</li>
+      <li>Recomendado: activar 2FA en <em>Settings → Password and authentication</em> (les da estabilidad si pierden el teléfono).</li>
+    </ol>
+    <p>Solo <strong>uno</strong> de los integrantes necesita ser el dueño del repo del laboratorio — pueden agregar al otro como colaborador después.</p>
+  </div>
+
+  <div class="card">
+    <h3>Crear cuenta de SonarCloud</h3>
+    <p>SonarCloud usa GitHub como proveedor de identidad — no se crea una cuenta nueva con correo/contraseña, simplemente se autentica con GitHub.</p>
+    <ol>
+      <li>Entrar a <a href="https://sonarcloud.io" target="_blank">sonarcloud.io</a> y click en <em>Log in</em> (arriba a la derecha).</li>
+      <li>Elegir <strong>With GitHub</strong>.</li>
+      <li>GitHub pide autorizar la app de SonarCloud — click en <em>Authorize SonarSource</em>. Esto le da permisos de lectura a sus repos públicos.</li>
+      <li>SonarCloud les crea una <strong>organización personal</strong> con su username de GitHub (ej. <code>raullondonom</code>). Esa organización es la que albergará el proyecto del laboratorio.</li>
+      <li>Después del primer login verán el dashboard vacío con un botón <em>Analyze new project</em>. <strong>No importen el proyecto todavía</strong> — eso lo harán en la sección 10 después de crear su copia del repo.</li>
+    </ol>
+    <div class="callout">
+      La cuenta debe pertenecer al mismo integrante que será dueño del repo en GitHub (porque SonarCloud reusa los permisos de GitHub para importar proyectos).
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Script de setup automatizado</h3>
+    <p>Desde la raíz del repo, en PowerShell:</p>
+    <div class="code-wrap"><button class="copy-btn">Copiar</button><pre><code># Modo simulación: muestra qué haría sin tocar nada
+powershell -ExecutionPolicy Bypass -File .\scripts\setup-windows.ps1 -DryRun
+
+# Ejecución real (te pedirá ENTER para confirmar)
+powershell -ExecutionPolicy Bypass -File .\scripts\setup-windows.ps1
+
+# Sin confirmación (úsalo si ya validaste con -DryRun)
+powershell -ExecutionPolicy Bypass -File .\scripts\setup-windows.ps1 -NoConfirm</code></pre></div>
+
+    <p>El script hace:</p>
+    <ol>
+      <li>Detecta y <strong>desinstala todas las versiones de Python</strong> (incluido las gestionadas por <em>Python Install Manager</em> de Microsoft).</li>
+      <li>Borra restos huérfanos en <code>%LOCALAPPDATA%\Python\</code> y limpia <code>PATH</code>.</li>
+      <li>Instala <strong>Python 3.12.10</strong> en scope de usuario.</li>
+      <li>Instala <strong>nvm-windows</strong> si no está, y luego <strong>Node 20.11.1</strong>.</li>
+      <li>Instala <strong>GitHub CLI</strong>.</li>
+      <li>Verifica Docker y git.</li>
+    </ol>
+
+    <div class="callout warn">
+      <strong>Importante:</strong> al desinstalar Python se pierden todas las herramientas instaladas con
+      <code>pip</code> (poetry, awscli, ansible, pre-commit, etc.). Si las necesitas, reinstálalas con
+      <code>pip install</code> después.
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Verificación manual</h3>
+    <p>Después del script, abre una <strong>terminal nueva</strong> (importante: las antiguas tienen PATH viejo) y verifica:</p>
+    <div class="code-wrap"><button class="copy-btn">Copiar</button><pre><code>python --version    # debe decir Python 3.12.10
+pip --version       # debe apuntar a Python312
+node --version      # debe decir v20.11.1
+npm --version
+git --version
+gh --version
+docker --version
+docker compose version</code></pre></div>
+  </div>
+
+  <div class="card">
+    <h3>Checklist de preparación</h3>
+    <div class="checklist" data-section="preparacion">
+      <div class="check"><input type="checkbox" id="prep1"><label for="prep1"><span>Docker Desktop instalado y corriendo</span></label></div>
+      <div class="check"><input type="checkbox" id="prep2"><label for="prep2"><span>Script de setup ejecutado sin errores</span></label></div>
+      <div class="check"><input type="checkbox" id="prep3"><label for="prep3"><span>Cuenta de GitHub creada</span></label></div>
+      <div class="check"><input type="checkbox" id="prep4"><label for="prep4"><span>Cuenta de SonarCloud creada (login con GitHub)</span></label></div>
+      <div class="check"><input type="checkbox" id="prep5"><label for="prep5"><span>Verificación manual: todos los comandos devuelven la versión esperada</span></label></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================== -->
+<section id="arquitectura">
+  <h2>4. Arquitectura de la aplicación</h2>
+
+  <p>La aplicación de ejemplo es un <strong>CRUD de tareas (to-do list)</strong>. La idea no es que sea
+  compleja sino tener piezas suficientes para cubrir las prácticas de CI.</p>
+
+  <div class="callout">
+    <strong>Importante:</strong> esta sección describe la arquitectura <em>final</em> (Etapa 3).
+    En Etapa 1 el repo solo tiene <code>/health</code> en el backend y una pantalla "Hola" en el frontend;
+    el código MVC completo, los endpoints CRUD y los componentes React llegan al aplicar el overlay
+    <code>etapa-2/</code>.
+  </div>
+
+  <div class="card">
+    <h3>Diagrama de contenedores</h3>
+    <div class="mermaid">
+flowchart LR
+    User(["👤 Navegador"]) -->|"HTTP 5173"| FE["🖥 Frontend<br/>React + Vite<br/>nginx"]
+    User -->|"HTTP 5050"| PG["🗄 pgAdmin4"]
+    FE -->|"fetch JSON 8000"| BE["⚙ Backend<br/>FastAPI MVC"]
+    BE -->|"SQL 5432"| DB[("🐘 PostgreSQL 16")]
+    PG -->|"SQL 5432"| DB
+    classDef svc fill:#e7f0ff,stroke:#2d7ff9,stroke-width:2px,color:#1d2433
+    class FE,BE,DB,PG svc
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Backend FastAPI — patrón MVC</h3>
+    <p>FastAPI no impone una estructura, pero adoptamos una organización tipo MVC para que los estudiantes
+    entrenen separación de responsabilidades:</p>
+    <table>
+      <thead><tr><th>Capa</th><th>Carpeta</th><th>Responsabilidad</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Model</strong></td><td><code>app/models/</code></td><td>Definición de tablas SQLAlchemy (<code>Task</code>). NO contiene lógica de presentación.</td></tr>
+        <tr><td>Schemas</td><td><code>app/schemas/</code></td><td>DTOs de Pydantic (<code>TaskCreate</code>, <code>TaskUpdate</code>, <code>TaskRead</code>). Validación de entrada/salida.</td></tr>
+        <tr><td><strong>Controller</strong></td><td><code>app/controllers/</code></td><td>Lógica de negocio (crear, listar, completar tarea). No conoce HTTP.</td></tr>
+        <tr><td><strong>View</strong></td><td><code>app/views/</code></td><td>Routers de FastAPI: traducen HTTP ⇄ controlador. Aquí van los códigos de estado, validación de path, etc.</td></tr>
+        <tr><td>Infra</td><td><code>app/database.py</code></td><td>Engine + dependencia <code>get_db</code>.</td></tr>
+        <tr><td>Entrada</td><td><code>app/main.py</code></td><td>Factory de la app, registra routers, monta middlewares.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Endpoints expuestos</h3>
+    <table>
+      <thead><tr><th>Método</th><th>Path</th><th>Descripción</th></tr></thead>
+      <tbody>
+        <tr><td>GET</td><td><code>/health</code></td><td>Healthcheck (lo usa Docker)</td></tr>
+        <tr><td>GET</td><td><code>/tasks</code></td><td>Lista tareas (opcional <code>?completed=true</code>)</td></tr>
+        <tr><td>GET</td><td><code>/tasks/count</code></td><td>Total (opcional filtro)</td></tr>
+        <tr><td>GET</td><td><code>/tasks/{id}</code></td><td>Obtener una</td></tr>
+        <tr><td>POST</td><td><code>/tasks</code></td><td>Crear (status 201)</td></tr>
+        <tr><td>PUT</td><td><code>/tasks/{id}</code></td><td>Actualizar parcialmente</td></tr>
+        <tr><td>POST</td><td><code>/tasks/{id}/toggle</code></td><td>Cambiar completed</td></tr>
+        <tr><td>DELETE</td><td><code>/tasks/{id}</code></td><td>Eliminar (status 204)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Frontend React</h3>
+    <ul>
+      <li><strong>Vite</strong> como bundler (más rápido que CRA, menos config que webpack).</li>
+      <li><strong>TypeScript</strong> en modo estricto.</li>
+      <li><strong>Axios</strong> para llamadas HTTP.</li>
+      <li>Componentes simples: <code>TaskForm</code>, <code>TaskList</code>. El estado se mantiene en <code>App</code>.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Checklist de comprensión</h3>
+    <div class="checklist" data-section="arquitectura">
+      <div class="check"><input type="checkbox" id="arq1"><label for="arq1"><span>Identifico los 4 contenedores y sus puertos</span></label></div>
+      <div class="check"><input type="checkbox" id="arq2"><label for="arq2"><span>Sé qué hace cada capa del MVC en el backend</span></label></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================== -->
+<section id="gitflow">
+  <h2>5. Git Flow del laboratorio</h2>
+
+  <div class="card">
+    <h3>¿Qué es Git Flow?</h3>
+    <p><strong>Git Flow</strong> es un <em>modelo de ramificación</em> propuesto por Vincent Driessen en 2010. No es una herramienta ni un comando de Git: es una <strong>convención</strong> sobre qué ramas existen en el repositorio, cuál es el rol de cada una y cómo viaja un cambio desde que se escribe hasta que llega a producción.</p>
+    <p>El Git Flow clásico define cinco tipos de rama:</p>
+    <table>
+      <thead><tr><th>Rama</th><th>Vive</th><th>Rol</th></tr></thead>
+      <tbody>
+        <tr><td><code>master</code> / <code>main</code></td><td>Permanente</td><td>Lo que está en producción. Solo recibe merges desde <code>develop</code> o <code>hotfix/*</code>. Cada merge equivale a un release.</td></tr>
+        <tr><td><code>develop</code></td><td>Permanente</td><td>Rama de integración. Aquí confluye todo lo que está "listo para el próximo release". El estado de <code>develop</code> es siempre estable, pero no necesariamente liberable.</td></tr>
+        <tr><td><code>feature/*</code></td><td>Temporal</td><td>Una rama por funcionalidad nueva. Nace de <code>develop</code> y vuelve a <code>develop</code> vía pull request.</td></tr>
+        <tr><td><code>release/*</code></td><td>Temporal</td><td>Preparación de un release específico (bumping de versión, fixes finales). Se mergea a <code>master</code> y de vuelta a <code>develop</code>.</td></tr>
+        <tr><td><code>hotfix/*</code></td><td>Temporal</td><td>Parches urgentes en producción. Nacen de <code>master</code>, vuelven a <code>master</code> y a <code>develop</code>.</td></tr>
+      </tbody>
+    </table>
+    <p>En este laboratorio usamos una <strong>versión simplificada</strong> del modelo: solo <code>master</code>, <code>develop</code> y <code>feature/*</code>. No hay <code>release/*</code> ni <code>hotfix/*</code> porque no manejamos versiones ni producción real. Lo importante a entender es:</p>
+    <ul>
+      <li>Nadie commitea directo a <code>master</code> ni a <code>develop</code> — todo entra por <strong>pull request</strong>.</li>
+      <li><code>develop</code> tiene un pipeline más permisivo (lint + tests sin gate de cobertura).</li>
+      <li><code>master</code> tiene un pipeline estricto (cobertura ≥80 %, Sonar Quality Gate, build Docker).</li>
+      <li>El nombre <code>master</code> es histórico; muchos repos nuevos usan <code>main</code>. En este lab usamos <code>master</code> a propósito para mostrar que ambos nombres funcionan igual.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Modelo de ramas del laboratorio</h3>
+    <p>Este diagrama muestra cómo se ven las ramas al final de las 3 etapas:</p>
+    <div class="mermaid">
+gitGraph
+    commit id: "Etapa 1 base"
+    branch develop
+    checkout develop
+    commit id: "develop = etapa 1"
+    branch feature/etapa-2-crud
+    checkout feature/etapa-2-crud
+    commit id: "+ CRUD (sin tests)"
+    checkout develop
+    merge feature/etapa-2-crud tag: "PR a develop OK"
+    checkout main
+    merge develop tag: "PR a master FALLA (cov.<80%)"
+    checkout develop
+    branch feature/etapa-3-tests
+    checkout feature/etapa-3-tests
+    commit id: "+ tests del CRUD"
+    checkout develop
+    merge feature/etapa-3-tests
+    checkout main
+    merge develop tag: "PR a master OK"
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>¿Por qué separar develop de master?</h3>
+    <ul>
+      <li><strong>develop</strong> es la rama de integración diaria. Aquí mergeas tu trabajo y el de tu pareja con un pipeline rápido (lint + tests sin gate estricto).</li>
+      <li><strong>master</strong> representa lo que iría a producción. Aquí el pipeline es estricto: cobertura ≥80 %, Quality Gate de Sonar verde, build de Docker exitoso.</li>
+      <li>Esta separación te permite romper cosas en <code>develop</code> mientras la rama estable (<code>master</code>) sigue desplegable.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Crear su copia del repo en GitHub</h3>
+    <p>El laboratorio se entrega con un repo de referencia. Cada pareja debe crear su <strong>propia copia</strong> en su cuenta personal de GitHub — no van a trabajar sobre el repo del profesor.</p>
+
+    <p>Repo de referencia (solo para clonar/inspeccionar, no para hacer push):</p>
+    <div class="code-wrap"><button class="copy-btn">Copiar</button><pre><code>https://github.com/raullondonom/laboratorio-cicd-demo</code></pre></div>
+
+    <p><strong>Pasos:</strong></p>
+    <ol>
+      <li>Crear un repo <strong>nuevo y vacío</strong> en su cuenta personal de GitHub:
+        <ul>
+          <li>Entrar a <a href="https://github.com/new" target="_blank">github.com/new</a>.</li>
+          <li>Nombre sugerido: <code>laboratorio-cicd-demo</code> (pueden cambiarlo, ver la advertencia abajo).</li>
+          <li><strong>Visibility: Public</strong> (obligatorio para que SonarCloud sea gratis y GitHub Actions no consuma minutos).</li>
+          <li>NO marquen "Initialize with README", NO añadan .gitignore ni licencia — el repo debe quedar vacío para recibir el contenido del laboratorio.</li>
+          <li>Click en <em>Create repository</em>.</li>
+        </ul>
+      </li>
+      <li>En PowerShell, desde la carpeta donde guardarán el proyecto, clonar el repo de referencia <strong>sin la carpeta <code>.git</code></strong> y subirlo a su repo nuevo:
+        <div class="code-wrap"><button class="copy-btn">Copiar</button><pre><code># 1. Clonar el repo de referencia
+git clone https://github.com/raullondonom/laboratorio-cicd-demo.git
+cd laboratorio-cicd-demo
+
+# 2. Desconectar del repo del profesor y conectar al de ustedes
+# Reemplacen &lt;su-usuario&gt; y &lt;su-repo&gt; con los datos de su cuenta
+git remote remove origin
+git remote add origin https://github.com/&lt;su-usuario&gt;/&lt;su-repo&gt;.git
+
+# 3. La rama principal viene como master. Subirla:
+git push -u origin master
+
+# 4. Crear develop a partir de master y subirla
+git checkout -b develop
+git push -u origin develop</code></pre></div>
+      </li>
+      <li>Refrescar la página del repo en GitHub. Deben ver:
+        <ul>
+          <li>El selector de ramas mostrando <strong>master</strong> y <strong>develop</strong>.</li>
+          <li>Todos los archivos del laboratorio (<code>backend/</code>, <code>frontend/</code>, <code>docker-compose.yml</code>, <code>guia.html</code>, etc.).</li>
+          <li>El badge <strong>Public</strong> al lado del nombre del repo.</li>
+        </ul>
+      </li>
+    </ol>
+
+    <div class="callout warn">
+      <strong>Si cambian el nombre del repo o del usuario</strong>, deben actualizar todas las referencias que aparezcan de aquí en adelante en la guía — especialmente en <code>sonar-project.properties</code> (sección 10) y en los URLs que escriban en el informe. Lo más sencillo: dejar el nombre <code>laboratorio-cicd-demo</code> tal cual.
+    </div>
+
+    <div class="capture">
+      <div class="cap-num">📸 1</div>
+      <div class="cap-body">
+        <div class="cap-title">Captura 1 — Repositorio creado en GitHub</div>
+        <div class="cap-desc">Página principal del repo en <code>github.com/&lt;su-usuario&gt;/&lt;su-repo&gt;</code>. Debe verse: el nombre del repo, el badge <strong>Public</strong>, el selector de ramas desplegado mostrando <strong>master</strong> y <strong>develop</strong>, y la lista de archivos del laboratorio. Pantalla completa con barra de tareas y URL visible.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Comandos típicos para una feature</h3>
+    <p>Una vez configurado el repo, así trabaja cada cambio (lo harán literal en Etapas 2 y 3):</p>
+    <div class="code-wrap"><button class="copy-btn">Copiar</button><pre><code># Partir SIEMPRE de develop actualizada
+git checkout develop
+git pull
+
+# Crear la rama de feature
+git checkout -b feature/mi-cambio
+
+# ... trabajan, hacen commits ...
+git add .
+git commit -m "mensaje descriptivo"
+
+# Publicar la rama
+git push -u origin feature/mi-cambio
+
+# En GitHub: abrir PR feature/mi-cambio → develop, esperar checks verdes, mergear</code></pre></div>
+  </div>
+
+  <div class="card">
+    <h3>Checklist de Git Flow</h3>
+    <div class="checklist" data-section="gitflow">
+      <div class="check"><input type="checkbox" id="gf1"><label for="gf1"><span>Entiendo qué es Git Flow y por qué separamos develop de master</span></label></div>
+      <div class="check"><input type="checkbox" id="gf2"><label for="gf2"><span>Repo nuevo creado en mi cuenta de GitHub, público, sin contenido inicial</span></label></div>
+      <div class="check"><input type="checkbox" id="gf3"><label for="gf3"><span>Contenido subido y ramas <code>master</code> y <code>develop</code> visibles en GitHub</span></label></div>
+      <div class="check"><input type="checkbox" id="gf4"><label for="gf4"><span>📸 Captura 1 tomada (repo público con ambas ramas visibles)</span></label></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================== -->
+<section id="ci-cd">
+  <h2>6. Teoría: Integración Continua y Entrega Continua</h2>
+
+  <div class="card">
+    <h3>¿Qué es CI (Continuous Integration)?</h3>
+    <p>CI es la práctica de <strong>integrar cambios al repositorio compartido frecuentemente</strong>
+    (al menos una vez al día) y validar automáticamente que cada integración no rompa nada. Cada commit
+    o PR dispara una pipeline que:</p>
+    <ol>
+      <li>Trae el código del repo.</li>
+      <li>Instala dependencias.</li>
+      <li>Ejecuta linters.</li>
+      <li>Compila / construye artefactos.</li>
+      <li>Ejecuta tests automatizados.</li>
+      <li>Mide cobertura.</li>
+      <li>Analiza calidad estática (SonarQube/SonarCloud).</li>
+    </ol>
+    <p>Si algún paso falla, el PR se bloquea — el cambio <em>no entra</em> al repo hasta que el autor lo arregle.</p>
+  </div>
+
+  <div class="card">
+    <h3>¿Qué es CD?</h3>
+    <p>Dos significados que conviene distinguir:</p>
+    <table>
+      <thead><tr><th>Concepto</th><th>Qué hace</th><th>Cuándo se despliega</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Continuous Delivery</strong></td>
+          <td>El pipeline construye un artefacto desplegable y lo deja <em>listo</em> en un registro/staging.</td>
+          <td>Despliegue a producción <strong>manual</strong> (un click).</td>
+        </tr>
+        <tr>
+          <td><strong>Continuous Deployment</strong></td>
+          <td>Igual al anterior, pero si todo el pipeline pasa, el despliegue a producción es <strong>automático</strong>.</td>
+          <td>Cada commit en <code>master</code> verde llega a producción solo.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>En este laboratorio practicamos <strong>solo CI</strong> + <em>Continuous Delivery parcial</em> (construimos las imágenes Docker, pero no las desplegamos).</p>
+  </div>
+
+  <div class="card">
+    <h3>Beneficios reales</h3>
+    <ul>
+      <li><strong>Feedback rápido:</strong> sabes en minutos si un cambio rompe algo, no en semanas.</li>
+      <li><strong>Calidad consistente:</strong> el repo nunca contiene código que no pasa los tests.</li>
+      <li><strong>Confianza para refactorizar:</strong> los tests + el linter te avisan si rompes algo.</li>
+      <li><strong>Onboarding:</strong> un dev nuevo solo necesita seguir las instrucciones del README — el pipeline le dice si su PR está bien.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Mitos comunes</h3>
+    <details><summary>"Si tengo CI, no necesito QA manual"</summary>
+      Falso. CI valida lo que está automatizado. Las pruebas exploratorias, de usabilidad y de aceptación siguen siendo humanas. CI te libera tiempo para esas tareas que <em>sí</em> requieren juicio.
+    </details>
+    <details><summary>"CI hace mi código bueno"</summary>
+      No. CI te <em>obliga</em> a tener tests, linter y análisis estático configurados, pero la calidad del código depende del equipo. CI es la red de seguridad, no el ingeniero.
+    </details>
+    <details><summary>"Es solo para grandes empresas"</summary>
+      GitHub Actions es gratis para repos públicos ilimitados. Una pareja de estudiantes monta lo mismo que una empresa Fortune 500 — la diferencia es solo escala.
+    </details>
+  </div>
+
+  <div class="card">
+    <h3>Checklist de comprensión</h3>
+    <div class="checklist" data-section="ci-cd">
+      <div class="check"><input type="checkbox" id="cicd1"><label for="cicd1"><span>Distingo entre Continuous Integration y Continuous Delivery/Deployment</span></label></div>
+      <div class="check"><input type="checkbox" id="cicd2"><label for="cicd2"><span>Entiendo qué etapas componen una pipeline de CI</span></label></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================== -->
+<section id="lint">
+  <h2>7. Análisis estático: linters</h2>
+
+  <div class="card">
+    <h3>¿Qué es un linter?</h3>
+    <p>Un <strong>linter</strong> analiza tu código sin ejecutarlo y detecta:</p>
+    <ul>
+      <li><strong>Errores reales</strong>: variables no definidas, imports rotos, returns inconsistentes.</li>
+      <li><strong>Bugs probables</strong>: comparar con <code>==</code> en lugar de <code>is</code>, modificar listas durante iteración, etc.</li>
+      <li><strong>Code smells</strong>: funciones demasiado largas, complejidad ciclomática alta, código muerto.</li>
+      <li><strong>Estilo</strong>: indentación, naming, líneas demasiado largas.</li>
+    </ul>
+    <p>Al correrlo en el PR garantizamos un mínimo de calidad y consistencia antes de invertir tiempo en review humano.</p>
+  </div>
+
+  <div class="card">
+    <h3>Ruff (Python)</h3>
+    <p>Linter de Python escrito en Rust. <strong>10× a 100× más rápido</strong> que flake8 y reemplaza a la mayoría de plugins clásicos.</p>
+    <p>Configuración en <code>backend/pyproject.toml</code>:</p>
+    <div class="code-wrap"><button class="copy-btn">Copiar</button><pre><code>[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+# E = pycodestyle errores
+# F = pyflakes (imports / vars)
+# I = orden de imports (isort)
+# B = bugbear (bugs comunes)
+# UP = pyupgrade (sintaxis nueva)</code></pre></div>
+
+    <p>Ejecución local:</p>
+    <div class="code-wrap"><button class="copy-btn">Copiar</button><pre><code>cd backend
+ruff check app          # solo reporta
+ruff check app --fix    # corrige lo que pueda automáticamente</code></pre></div>
+  </div>
+
+  <div class="card">
+    <h3>ESLint (TypeScript/React)</h3>
+    <p>Linter estándar del ecosistema JS. Configurado en <code>frontend/.eslintrc.cjs</code>:</p>
+    <div class="code-wrap"><button class="copy-btn">Copiar</button><pre><code>extends: [
+  "eslint:recommended",
+  "plugin:@typescript-eslint/recommended",
+]</code></pre></div>
+
+    <p>Ejecución:</p>
+    <div class="code-wrap"><button class="copy-btn">Copiar</button><pre><code>cd frontend
+npm run lint            # --max-warnings 0 (cualquier warning falla)</code></pre></div>
+  </div>
+
+  <div class="card">
+    <h3>Integración en el pipeline</h3>
+    <p>En <code>ci-develop.yml</code> el lint es un job propio que corre en paralelo con los tests:</p>
+    <div class="code-wrap"><button class="copy-btn">Copiar</button><pre><code>lint-backend:
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.12.10"
+    - run: pip install -r requirements.txt
+      working-directory: backend
+    - run: ruff check app
+      working-directory: backend</code></pre></div>
+    <p>Si falla, el check del PR se pone rojo y no permite mergear (cuando hay branch protection).</p>
+  </div>
+
+  <div class="card">
+    <h3>Checklist de comprensión</h3>
+    <div class="checklist" data-section="lint">
+      <div class="check"><input type="checkbox" id="lint1"><label for="lint1"><span>Sé qué tipo de problemas detecta un linter (y cuáles no)</span></label></div>
+      <div class="check"><input type="checkbox" id="lint2"><label for="lint2"><span>Sé ejecutar ruff y eslint localmente</span></label></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================== -->
+<section id="tests">
+  <h2>8. Pruebas automatizadas</h2>
+
+  <div class="card">
+    <h3>Pirámide de pruebas</h3>
+    <div class="mermaid">
+graph TD
+    E2E["E2E - lentas, frágiles<br/>pocas"]:::e2e
+    INT["Integración - medias<br/>moderadas"]:::int
+    UNIT["Unitarias - rápidas<br/>muchas"]:::unit
+    E2E --> INT
+    INT --> UNIT
+    classDef unit fill:#dcfce7,stroke:#16a34a
+    classDef int fill:#fef3c7,stroke:#d97706
+    classDef e2e fill:#fee2e2,stroke:#dc2626
+    </div>
+    <p>La regla general: <strong>muchas pruebas unitarias, varias de integración, pocas E2E</strong>.
+    Las unitarias son rápidas y baratas; las E2E son lentas y se rompen con cualquier cambio cosmético.</p>
+  </div>
+
+  <div class="card">
+    <h3>Backend con pytest</h3>
+    <p>Estructura: <code>backend/tests/</code></p>
+    <ul>
+      <li><code>conftest.py</code> — fixtures compartidas. En Etapa 2 sustituye PostgreSQL por SQLite en memoria para que las pruebas no necesiten un contenedor corriendo.</li>
+      <li><code>test_health.py</code> — prueba mínima de Etapa 1 (solo <code>/health</code>).</li>
+      <li><code>test_tasks_extra.py</code> — pruebas que se añaden en Etapa 3 (vienen en la carpeta <code>etapa-3/</code>).</li>
+    </ul>
+    <p>Fixture clave para FastAPI:</p>
+    <div class="code-wrap"><button class="copy-btn">Copiar</button><pre><code>from fastapi.testclient import TestClient
+from app.main import app
+
+@pytest.fixture()
+def client():
+    yield TestClient(app)</code></pre></div>
+
+    <p>Ejemplo de test:</p>
+    <div class="code-wrap"><button class="copy-btn">Copiar</button><pre><code>def test_create_task(client):
+    response = client.post("/tasks", json={"title": "Aprender CI"})
+    assert response.status_code == 201
+    assert response.json()["title"] == "Aprender CI"</code></pre></div>
+  </div>
+
+  <div class="card">
+    <h3>Frontend con Vitest + Testing Library</h3>
+    <p>Filosofía de Testing Library: <strong>prueba lo que ve el usuario</strong>, no detalles internos.
+    Buscas por texto visible, por rol ARIA o por label, no por classNames internos.</p>
+    <div class="code-wrap"><button class="copy-btn">Copiar</button><pre><code>import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+
+it("crea una tarea", async () => {
+  const user = userEvent.setup();
+  render(&lt;App /&gt;);
+  await user.type(screen.getByLabelText(/titulo/i), "Estudiar");
+  await user.click(screen.getByRole("button", { name: /Agregar/i }));
+  expect(await screen.findByText("Estudiar")).toBeInTheDocument();
+});</code></pre></div>
+
+    <p>Mockear el servicio HTTP para no depender del backend:</p>
+    <div class="code-wrap"><button class="copy-btn">Copiar</button><pre><code>vi.mock("../services/api", () => ({
+  listTasks: vi.fn().mockResolvedValue([]),
+  createTask: vi.fn(),
+}));</code></pre></div>
+  </div>
+
+  <div class="card">
+    <h3>Qué probar en cada capa MVC</h3>
+    <table>
+      <thead><tr><th>Capa</th><th>Tipo de prueba</th><th>Ejemplo</th></tr></thead>
+      <tbody>
+        <tr><td>Model</td><td>Unitaria pura</td><td><code>task.mark_completed()</code> setea <code>completed = True</code></td></tr>
+        <tr><td>Controller</td><td>Unitaria con DB en memoria</td><td><code>create_task</code> retorna instancia con <code>id</code></td></tr>
+        <tr><td>View</td><td>Integración HTTP</td><td><code>POST /tasks</code> con body inválido → 422</td></tr>
+        <tr><td>Schema</td><td>Unitaria de validación</td><td><code>TaskCreate(title="")</code> → ValidationError</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Checklist de comprensión</h3>
+    <div class="checklist" data-section="tests">
+      <div class="check"><input type="checkbox" id="t1"><label for="t1"><span>Distingo entre prueba unitaria, de integración y E2E</span></label></div>
+      <div class="check"><input type="checkbox" id="t2"><label for="t2"><span>Sé ejecutar pytest y vitest localmente</span></label></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================== -->
+<section id="cobertura">
+  <h2>9. Cobertura de código</h2>
+
+  <div class="card">
+    <h3>¿Qué mide?</h3>
+    <p>La <strong>cobertura</strong> es el porcentaje de tu código que es ejecutado durante los tests. Hay varios niveles:</p>
+    <ul>
+      <li><strong>Cobertura de líneas:</strong> qué % de líneas se ejecuta al menos una vez. La más usada.</li>
+      <li><strong>Cobertura de ramas (branches):</strong> qué % de caminos <code>if/else</code> se recorren. Más estricta.</li>
+      <li><strong>Cobertura de funciones:</strong> qué % de funciones se invoca alguna vez.</li>
+      <li><strong>Cobertura de sentencias:</strong> similar a líneas pero contando <em>statements</em>.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>¿Por qué 80 % y no 100 %?</h3>
+    <ul>
+      <li><strong>Ley de rendimientos decrecientes</strong>: del 0 al 70 % obtienes mucha protección con poco esfuerzo. Del 90 al 100 % te toca testear código defensivo, manejo de errores que nunca pasan, etc.</li>
+      <li><strong>Falsa sensación de seguridad</strong>: 100 % de cobertura no significa 100 % de correctitud. Puedes ejecutar todas las líneas con asserts incorrectos.</li>
+      <li><strong>80 % es industria estándar</strong>: Google, Spotify, ThoughtWorks usan umbrales similares en proyectos nuevos.</li>
+    </ul>
+    <div class="callout">
+      <strong>Importante:</strong> 80 % no es un objetivo, es un <em>piso</em>. Hay código crítico (autenticación, pagos, criptografía) que debería estar al 100 %, y código trivial (getters/setters, prints) que no necesita prueba.
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Cobertura con pytest-cov</h3>
+    <p>Comando completo:</p>
+    <div class="code-wrap"><button class="copy-btn">Copiar</button><pre><code>pytest --cov=app --cov-report=term-missing --cov-report=xml --cov-fail-under=80</code></pre></div>
+    <ul>
+      <li><code>--cov=app</code> — qué carpeta medir.</li>
+      <li><code>--cov-report=term-missing</code> — mostrar tabla con líneas no cubiertas.</li>
+      <li><code>--cov-report=xml</code> — generar <code>coverage.xml</code> (lo lee Sonar).</li>
+      <li><code>--cov-fail-under=80</code> — <strong>falla si la cobertura total es &lt;80 %</strong>. Esta es la línea que rechaza el PR.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Cobertura con Vitest</h3>
+    <p>Configurado en <code>vite.config.ts</code>:</p>
+    <div class="code-wrap"><button class="copy-btn">Copiar</button><pre><code>test: {
+  coverage: {
+    provider: "v8",
+    reporter: ["text", "lcov"],   // lcov es lo que entiende Sonar
+    thresholds: {
+      lines: 80, statements: 80, functions: 80, branches: 70,
+    },
+  },
+}</code></pre></div>
+    <p>Comando: <code>npm run test:coverage</code></p>
+  </div>
+
+  <div class="card">
+    <h3>Anti-patrones de cobertura</h3>
+    <ul>
+      <li><strong>Tests sin asserts</strong>: ejecutan código pero no validan nada. Suben cobertura, no calidad.</li>
+      <li><strong>Tests acoplados a la implementación</strong>: si cambias un nombre interno se rompen. Prueba comportamientos, no líneas.</li>
+      <li><strong>Mocks excesivos</strong>: si tu test mockea todo lo que la función toca, en realidad estás probando el mock.</li>
+      <li><strong>Cobertura como meta única</strong>: 80 % de líneas malas sigue siendo malo. Combinar con Sonar (que mira complejidad, duplicación, smells) compensa.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Checklist de comprensión</h3>
+    <div class="checklist" data-section="cobertura">
+      <div class="check"><input type="checkbox" id="cov1"><label for="cov1"><span>Entiendo qué mide la cobertura y por qué el umbral es 80 %</span></label></div>
+      <div class="check"><input type="checkbox" id="cov2"><label for="cov2"><span>Sé generar el reporte de cobertura tanto en backend como en frontend</span></label></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================== -->
+<section id="sonar">
+  <h2>10. SonarCloud</h2>
+
+  <div class="card">
+    <h3>¿Qué hace Sonar?</h3>
+    <p>SonarCloud (versión SaaS de SonarQube) es un <strong>análisis estático profundo</strong> que detecta
+    cuatro grandes categorías:</p>
+    <table>
+      <thead><tr><th>Categoría</th><th>Ejemplo</th><th>Severidad</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Bugs</strong></td><td>NullPointerException probable, división por cero</td><td>Bloqueante</td></tr>
+        <tr><td><strong>Vulnerabilities</strong></td><td>Inyección SQL, secret hardcodeado, criptografía débil</td><td>Bloqueante</td></tr>
+        <tr><td><strong>Code Smells</strong></td><td>Función con 50 líneas, complejidad ciclomática 25, parámetro no usado</td><td>Mayor / menor</td></tr>
+        <tr><td><strong>Security Hotspots</strong></td><td>Uso de regex sin anchors, CORS abierto, deserialización</td><td>A revisar humano</td></tr>
+      </tbody>
+    </table>
+    <p>Además calcula:</p>
+    <ul>
+      <li><strong>Cobertura</strong> (usa los reportes que le pasas).</li>
+      <li><strong>Duplicación de código</strong> (% de líneas duplicadas).</li>
+      <li><strong>Maintainability Rating</strong> (A a E) basado en code smells vs total de líneas.</li>
+      <li><strong>Reliability Rating</strong> y <strong>Security Rating</strong>.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>El Quality Gate</h3>
+    <p>Es un conjunto de condiciones que tu código debe cumplir para considerarse "aceptable". El
+    default <em>Sonar Way</em> incluye:</p>
+    <ul>
+      <li>Cobertura en <strong>código nuevo</strong> ≥ 80 %.</li>
+      <li>Duplicación en código nuevo ≤ 3 %.</li>
+      <li>0 bugs en código nuevo.</li>
+      <li>0 vulnerabilidades en código nuevo.</li>
+      <li>Maintainability Rating de A en código nuevo.</li>
+      <li>Security Hotspots revisados al 100 %.</li>
+    </ul>
+    <p>Nota la palabra <strong>"código nuevo"</strong>: Sonar mide solo lo que cambiaste en el PR. Esto evita que
+    proyectos legacy con deudas grandes queden bloqueados — la regla es "no empeores lo que tienes".</p>
+  </div>
+
+  <div class="card">
+    <h3>Configuración paso a paso</h3>
+    <ol>
+      <li>Ir a <a href="https://sonarcloud.io" target="_blank">sonarcloud.io</a> y hacer login con GitHub
+        (autoriza la app si te lo pide).</li>
+      <li>Click en <em>+</em> arriba a la derecha → <strong>Analyze new project</strong>.</li>
+      <li>Importar el repo público del laboratorio (si te pide crear organización, elige tu usuario).</li>
+      <li><strong>Desactivar Automatic Analysis</strong>: dentro del proyecto, ir a
+        <em>Administration → Analysis Method</em> y apagar el toggle de "Automatic Analysis". Esto es
+        <strong>obligatorio</strong>; si queda activo Sonar analiza por su cuenta sin los reportes de
+        cobertura que sube nuestro workflow.</li>
+      <li>Generar el token: avatar arriba derecha → <strong>My Account → Security → Generate Tokens</strong>.
+        Nombre <code>lab-cicd</code>, type <em>User Token</em>. Copiar el valor (solo se muestra una vez).</li>
+      <li>En GitHub: <em>Settings → Secrets and variables → Actions → New repository secret</em>.
+        Nombre <code>SONAR_TOKEN</code>, valor el token copiado.</li>
+      <li>Anotar los identificadores de tu proyecto. Los puedes ver en la URL:
+        <code>https://sonarcloud.io/project/overview?id=&lt;PROJECT_KEY&gt;</code>. El <code>ORG</code> suele ser
+        tu usuario de GitHub; el <code>PROJECT_KEY</code> es algo como <code>tu-usuario_laboratorio-cicd-demo</code>.</li>
+      <li>Editar <code>sonar-project.properties</code> en la raíz del repo y reemplazar los placeholders
+        <code>ORG</code> y <code>ORG_PROYECTO</code> con esos valores reales.</li>
+      <li>Commit, push. La próxima vez que abras un PR a <code>master</code>, el job
+        <code>SonarCloud Quality Gate</code> se ejecutará.</li>
+    </ol>
+
+    <div class="capture">
+      <div class="cap-num">📸 2</div>
+      <div class="cap-body">
+        <div class="cap-title">Captura 2 — SonarCloud conectado</div>
+        <div class="cap-desc">Después del paso 3 (importar el repo): página inicial del proyecto en SonarCloud (<code>https://sonarcloud.io/project/overview?id=...</code>) mostrando el nombre del proyecto, organización, y aunque el análisis aún no haya corrido debe verse el banner "Waiting for first analysis" o "Last analysis: ...". Pantalla completa con la URL visible.</div>
+      </div>
+    </div>
+    <div class="capture">
+      <div class="cap-num">📸 3</div>
+      <div class="cap-body">
+        <div class="cap-title">Captura 3 — SONAR_TOKEN configurado en GitHub</div>
+        <div class="cap-desc">Después del paso 6: pantalla de GitHub <em>Settings → Secrets and variables → Actions</em> mostrando el secret <code>SONAR_TOKEN</code> en la lista (el valor aparece oculto con asteriscos — eso es correcto). Debe verse la barra de tareas y la URL completa del repo.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Cómo leer el dashboard</h3>
+    <ul>
+      <li><strong>Overview:</strong> verde si pasa el gate, rojo si no.</li>
+      <li><strong>Issues:</strong> lista de bugs/smells con severidad y archivo.</li>
+      <li><strong>Measures:</strong> métricas históricas (cobertura, duplicación, complejidad).</li>
+      <li><strong>Activity:</strong> evolución del proyecto en el tiempo.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Checklist de configuración</h3>
+    <div class="checklist" data-section="sonar">
+      <div class="check"><input type="checkbox" id="sn1"><label for="sn1"><span>Proyecto importado en SonarCloud</span></label></div>
+      <div class="check"><input type="checkbox" id="sn2"><label for="sn2"><span>📸 Captura 2 tomada (página del proyecto en SonarCloud)</span></label></div>
+      <div class="check"><input type="checkbox" id="sn3"><label for="sn3"><span>Automatic Analysis apagado</span></label></div>
+      <div class="check"><input type="checkbox" id="sn4"><label for="sn4"><span>SONAR_TOKEN generado y guardado como secret en GitHub</span></label></div>
+      <div class="check"><input type="checkbox" id="sn5"><label for="sn5"><span>📸 Captura 3 tomada (secret SONAR_TOKEN en Settings de GitHub)</span></label></div>
+      <div class="check"><input type="checkbox" id="sn6"><label for="sn6"><span>sonar-project.properties editado con ORG y PROJECT_KEY reales</span></label></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================== -->
+<section id="actions">
+  <h2>11. GitHub Actions paso a paso</h2>
+
+  <div class="card">
+    <h3>Anatomía de un workflow</h3>
+    <p>Un workflow es un archivo YAML en <code>.github/workflows/</code>. Estructura general:</p>
+    <div class="code-wrap"><button class="copy-btn">Copiar</button><pre><code>name: ci-develop           # nombre que aparece en GitHub UI
+on:                        # qué dispara el workflow
+  pull_request:
+    branches: [develop]
+permissions:               # qué permisos tiene GITHUB_TOKEN
+  contents: read
+jobs:                      # uno o más jobs (corren en paralelo por defecto)
+  mi-job:
+    runs-on: ubuntu-latest # tipo de máquina virtual
+    steps:                 # pasos secuenciales dentro del job
+      - uses: actions/checkout@v4   # acción reutilizable
+      - run: echo hola              # comando shell</code></pre></div>
+  </div>
+
+  <div class="card">
+    <h3>Elementos clave</h3>
+    <table>
+      <thead><tr><th>Concepto</th><th>Qué es</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Trigger</strong></td><td>Evento que dispara el workflow: <code>push</code>, <code>pull_request</code>, <code>schedule</code>, <code>workflow_dispatch</code> (manual).</td></tr>
+        <tr><td><strong>Job</strong></td><td>Unidad que se ejecuta en una máquina aislada. Los jobs pueden depender uno de otro con <code>needs:</code>.</td></tr>
+        <tr><td><strong>Step</strong></td><td>Paso dentro de un job. Puede ser un comando (<code>run:</code>) o una acción reutilizable (<code>uses:</code>).</td></tr>
+        <tr><td><strong>Runner</strong></td><td>La máquina que ejecuta el job. <code>ubuntu-latest</code> es gratuito y lo más usado.</td></tr>
+        <tr><td><strong>Service</strong></td><td>Contenedor auxiliar (ej. Postgres) que arranca antes del job y muere al final.</td></tr>
+        <tr><td><strong>Secret</strong></td><td>Variable cifrada (<code>secrets.SONAR_TOKEN</code>). No se muestra en logs.</td></tr>
+        <tr><td><strong>Artifact</strong></td><td>Archivo que un job sube y otro descarga (ej. reportes de cobertura).</td></tr>
+        <tr><td><strong>Cache</strong></td><td>Mecanismo para reusar <code>node_modules</code> o <code>~/.cache/pip</code> entre runs.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Pipeline de develop (rápido)</h3>
+    <p>Cuatro jobs en paralelo. Lint backend, lint frontend, pytest, build frontend. Sin gate de cobertura.</p>
+    <div class="code-wrap"><button class="copy-btn">Copiar</button><pre><code>name: ci-develop
+on:
+  pull_request:
+    branches: [develop]
+jobs:
+  lint-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12.10"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: pip install -r requirements.txt
+        working-directory: backend
+      - run: ruff check app
+        working-directory: backend
+  # ... (lint-frontend, test-backend, build-frontend) ...</code></pre></div>
+    <p>El job <code>build-frontend</code> usa <code>npm install --no-audit --no-fund</code> en vez de
+    <code>npm ci</code> porque este último requiere <code>package-lock.json</code>, y el lockfile generado en
+    Windows no incluye las dependencias opcionales de rollup necesarias en runners Linux
+    (<a href="https://github.com/npm/cli/issues/4828" target="_blank">npm/cli#4828</a>). Por eso este lab
+    también excluye <code>package-lock.json</code> del repo.</p>
+  </div>
+
+  <div class="card">
+    <h3>Pipeline de master (estricto)</h3>
+    <p>Cinco jobs. Lint, cobertura backend ≥80 %, cobertura frontend ≥80 %, SonarCloud Quality Gate, build Docker.</p>
+    <p>El job de Sonar <strong>depende</strong> de los dos de cobertura (necesita los reportes como artefactos),
+    pero usa <code>if: always()</code> para correr aunque la cobertura haya fallado — así el dashboard de Sonar
+    igualmente reporta su Quality Gate en lugar de quedar "skipped":</p>
+    <div class="code-wrap"><button class="copy-btn">Copiar</button><pre><code>sonarcloud:
+  needs: [test-backend-coverage, test-frontend-coverage]
+  if: always()        # corre aunque las dependencias fallen
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0    # Sonar quiere el historial completo
+    - uses: actions/download-artifact@v4
+      with:
+        name: coverage-backend
+        path: backend
+      continue-on-error: true
+    - uses: actions/download-artifact@v4
+      with:
+        name: coverage-frontend
+        path: frontend/coverage
+      continue-on-error: true
+    - uses: SonarSource/sonarcloud-github-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}</code></pre></div>
+    <p>Nota: el job de cobertura backend incluye un paso <code>sed</code> que prefija
+    <code>backend/app/</code> a las rutas dentro de <code>coverage.xml</code>, porque pytest-cov con
+    <code>source=["app"]</code> escribe rutas relativas a <code>backend/</code> pero Sonar las espera
+    relativas a la raíz del repo.</p>
+  </div>
+
+  <div class="card">
+    <h3>Costo y límites</h3>
+    <ul>
+      <li><strong>Repos públicos en GitHub:</strong> minutos de Actions <strong>ilimitados y gratis</strong>.</li>
+      <li><strong>Repos privados:</strong> 2 000 minutos/mes gratis en cuentas free, 3 000 en Pro.</li>
+      <li>SonarCloud es <strong>gratis</strong> para proyectos en repos públicos. Pago si tu repo es privado.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Checklist de comprensión</h3>
+    <div class="checklist" data-section="actions">
+      <div class="check"><input type="checkbox" id="act1"><label for="act1"><span>Sé identificar trigger, job, step y secret en un workflow</span></label></div>
+      <div class="check"><input type="checkbox" id="act2"><label for="act2"><span>Entiendo por qué master tiene más jobs y más estrictos que develop</span></label></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================== -->
+<section id="branch-protection">
+  <h2>12. Branch Protection</h2>
+
+  <div class="card">
+    <h3>¿Para qué sirve?</h3>
+    <p>Sin branch protection cualquiera con permiso de push puede <code>git push --force</code> a master,
+    o mergear PRs aunque el pipeline esté rojo. Branch protection impone reglas a nivel de servidor:</p>
+    <ul>
+      <li>Prohibir push directo: todos los cambios pasan por PR.</li>
+      <li>Requerir que ciertos checks de CI estén verdes antes de mergear.</li>
+      <li>Requerir N revisiones aprobatorias (1 en este lab).</li>
+      <li>Prohibir <code>--force-push</code> y eliminación de la rama.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Configuración paso a paso</h3>
+    <ol>
+      <li>En GitHub, ir al repo → <em>Settings → Branches</em>.</li>
+      <li>Click en <strong>Add branch protection rule</strong>.</li>
+      <li><em>Branch name pattern</em>: <code>develop</code>.</li>
+      <li>Marcar <strong>Require a pull request before merging</strong>.
+        <em>Required approvals</em>: opcional (en parejas con un solo integrante con permisos no funciona, déjalo en 0 si solo hay un push handler).</li>
+      <li>Marcar <strong>Require status checks to pass before merging</strong> y <strong>Require branches to be up to date before merging</strong>. Buscar y agregar (estos nombres salen del workflow <code>ci-develop.yml</code>):
+        <ul>
+          <li><code>Lint backend (ruff)</code></li>
+          <li><code>Lint frontend (eslint)</code></li>
+          <li><code>Pruebas backend (sin gate de cobertura)</code></li>
+          <li><code>Build frontend (vite)</code></li>
+        </ul>
+      </li>
+      <li>Marcar <strong>Do not allow bypassing the above settings</strong>.</li>
+      <li>Save changes.</li>
+      <li>Crear OTRA regla para <code>master</code> con los checks de <code>ci-master.yml</code>:
+        <ul>
+          <li><code>Lint (ruff + eslint)</code></li>
+          <li><code>Backend coverage (&gt;=80%)</code></li>
+          <li><code>Frontend coverage (&gt;=80%)</code></li>
+          <li><code>SonarCloud Quality Gate</code></li>
+          <li><code>Build de imagenes Docker</code></li>
+        </ul>
+      </li>
+    </ol>
+    <div class="callout warn">
+      Los checks <strong>solo aparecen en la lista después de que han corrido al menos una vez</strong>.
+      Si no los ves, abre primero un PR cualquiera para que GitHub los descubra, luego vuelve a configurar branch protection.
+    </div>
+
+    <div class="capture">
+      <div class="cap-num">📸 4</div>
+      <div class="cap-body">
+        <div class="cap-title">Captura 4 — Branch protection en develop</div>
+        <div class="cap-desc">Pantalla de <em>Settings → Branches</em> mostrando la regla creada con pattern <code>develop</code> y los 4 checks requeridos en la lista. Debe verse pantalla completa con la URL del repo.</div>
+      </div>
+    </div>
+    <div class="capture">
+      <div class="cap-num">📸 5</div>
+      <div class="cap-body">
+        <div class="cap-title">Captura 5 — Branch protection en master</div>
+        <div class="cap-desc">Misma pantalla mostrando la segunda regla con pattern <code>master</code> y los 5 checks requeridos (incluyendo SonarCloud Quality Gate y Build Docker). Pantalla completa con URL visible.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Checklist de Branch Protection</h3>
+    <div class="checklist" data-section="branch-protection">
+      <div class="check"><input type="checkbox" id="bp1"><label for="bp1"><span>Regla para develop creada con sus 4 checks</span></label></div>
+      <div class="check"><input type="checkbox" id="bp2"><label for="bp2"><span>📸 Captura 4 tomada (regla de branch protection en develop)</span></label></div>
+      <div class="check"><input type="checkbox" id="bp3"><label for="bp3"><span>Regla para master creada con sus 5 checks (incluido SonarCloud)</span></label></div>
+      <div class="check"><input type="checkbox" id="bp4"><label for="bp4"><span>📸 Captura 5 tomada (regla de branch protection en master)</span></label></div>
+      <div class="check"><input type="checkbox" id="bp5"><label for="bp5"><span>"Do not allow bypassing" activado en ambas reglas</span></label></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================== -->
+<section id="etapas">
+  <h2>13. Recorrido de las tres etapas</h2>
+
+  <div class="card">
+    <h3><span class="badge-stage pass">ETAPA 1</span> Setup inicial del repo</h3>
+    <p>Estado base del repo clonado. La app es trivial (<code>/health</code> + pantalla "Hola") y tiene 100% de cobertura porque solo se prueba lo poco que existe. El trabajo de esta etapa es <strong>configuración</strong>, no código:</p>
+    <p>A estas alturas ya hicieron todo el trabajo configurable en las secciones anteriores. Este card es el <strong>cierre de la Etapa 1</strong>: levantar el stack local y verificar que la app trivial funciona.</p>
+    <ol>
+      <li>Confirmar que ya completaron en las secciones anteriores:
+        <ul>
+          <li>Repo público en GitHub con ramas <code>master</code> y <code>develop</code> (sección 5) — <strong>Captura 1</strong>.</li>
+          <li>Proyecto importado en SonarCloud con <code>SONAR_TOKEN</code> guardado como secret (sección 10) — <strong>Capturas 2 y 3</strong>.</li>
+          <li><code>sonar-project.properties</code> editado con sus claves reales (sección 10).</li>
+          <li>Branch protection configurada en <code>master</code> y <code>develop</code> (sección 12) — <strong>Capturas 4 y 5</strong>.</li>
+        </ul>
+      </li>
+      <li>Levantar el stack local: <code>docker compose up -d</code> desde la raíz del repo.</li>
+      <li>Verificar que los 4 servicios estén sanos: <code>docker compose ps</code>.</li>
+      <li>Abrir el navegador en <code>localhost:8000/docs</code> (backend Swagger) y en <code>localhost:5173</code> (frontend).</li>
+    </ol>
+
+    <div class="capture">
+      <div class="cap-num">📸 6</div>
+      <div class="cap-body">
+        <div class="cap-title">Captura 6 — docker compose ps</div>
+        <div class="cap-desc">Terminal mostrando la salida de <code>docker compose ps</code> con los 4 servicios (<code>backend</code>, <code>frontend</code>, <code>db</code>, <code>pgadmin</code>) en estado <strong>healthy</strong> o <strong>running</strong>. Pantalla completa, la hora del sistema visible.</div>
+      </div>
+    </div>
+    <div class="capture">
+      <div class="cap-num">📸 7</div>
+      <div class="cap-body">
+        <div class="cap-title">Captura 7 — Backend Etapa 1 funcionando</div>
+        <div class="cap-desc">Navegador en <code>http://localhost:8000/docs</code> mostrando el Swagger UI con UN solo endpoint <code>GET /health</code>. Debe verse la URL completa y la pantalla entera. Esto confirma que en Etapa 1 todavía no hay endpoints de CRUD.</div>
+      </div>
+    </div>
+    <div class="capture">
+      <div class="cap-num">📸 8</div>
+      <div class="cap-body">
+        <div class="cap-title">Captura 8 — Frontend Etapa 1 funcionando</div>
+        <div class="cap-desc">Navegador en <code>http://localhost:5173</code> mostrando la pantalla mínima de Etapa 1 (texto "Hola" o "Laboratorio CI/CD" sin lista de tareas todavía). URL visible y pantalla completa.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="card">
+    <h3><span class="badge-stage fail">ETAPA 2</span> Agregar CRUD (sin tests)</h3>
+    <p>Recibes la carpeta <code>etapa-2/</code> con el código del CRUD. Lo integras pero <strong>sin tests adicionales</strong>: la cobertura cae por debajo del 80 % y el PR a master debe rechazarse.</p>
+    <ol>
+      <li>Desde <code>develop</code> sincronizada: <code>git checkout -b feature/etapa-2-crud</code>.</li>
+      <li>Aplicar el overlay (sobreescribe y agrega archivos):
+        <div class="code-wrap"><button class="copy-btn">Copiar</button><pre><code># PowerShell - desde la raíz del repo
+Copy-Item -Recurse -Force ..\etapa-2\backend .
+Copy-Item -Recurse -Force ..\etapa-2\frontend .
+
+# Git Bash / Linux
+cp -r ../etapa-2/backend ../etapa-2/frontend .</code></pre></div>
+      </li>
+      <li>Validar localmente la cobertura insuficiente:
+        <ul>
+          <li><code>cd backend &amp;&amp; pytest --cov=app</code> → reporta ~56 % (FALLA el gate de 80%).</li>
+          <li><code>cd frontend &amp;&amp; npm install &amp;&amp; npm run test:coverage</code> → ~35 % (FALLA).</li>
+        </ul>
+      </li>
+      <li><code>git add . &amp;&amp; git commit -m "etapa 2: CRUD" &amp;&amp; git push -u origin feature/etapa-2-crud</code>.</li>
+      <li>Abrir <strong>PR a develop</strong>. El workflow <code>ci-develop</code> es permisivo (lint + tests sin gate de cobertura), <strong>pasa</strong>. Mergear.</li>
+      <li>Abrir <strong>PR de develop a master</strong>. El workflow <code>ci-master</code> es estricto y <strong>FALLA</strong>:
+        <ul>
+          <li><code>Backend coverage (&gt;=80%)</code> rojo (cobertura ~56 %)</li>
+          <li><code>Frontend coverage (&gt;=80%)</code> rojo (cobertura ~35 %)</li>
+          <li><code>SonarCloud Code Analysis</code> rojo (Quality Gate FAILED — coverage on new code &lt;80%)</li>
+        </ul>
+      </li>
+      <li><strong>Dejar abierto</strong> el PR develop → master. Lo retomamos en la Etapa 3.</li>
+    </ol>
+
+    <div class="capture">
+      <div class="cap-num">📸 9</div>
+      <div class="cap-body">
+        <div class="cap-title">Captura 9 — Overlay etapa-2 aplicado</div>
+        <div class="cap-desc">Terminal tras correr <code>git diff --stat</code> después de aplicar el overlay etapa-2. Debe verse una lista larga de archivos modificados/agregados (modelos, schemas, controllers, views, componentes React, services). Pantalla completa.</div>
+      </div>
+    </div>
+    <div class="capture">
+      <div class="cap-num">📸 10</div>
+      <div class="cap-body">
+        <div class="cap-title">Captura 10 — Cobertura backend Etapa 2 FALLA</div>
+        <div class="cap-desc">Terminal con la salida de <code>pytest --cov=app --cov-fail-under=80</code> mostrando: la tabla de cobertura por archivo, la línea <strong>TOTAL</strong> con porcentaje &lt;80 %, y el mensaje rojo <code>FAILED Required test coverage of 80% not reached. Total coverage: 56.XX%</code>. Pantalla completa.</div>
+      </div>
+    </div>
+    <div class="capture">
+      <div class="cap-num">📸 11</div>
+      <div class="cap-body">
+        <div class="cap-title">Captura 11 — Cobertura frontend Etapa 2 FALLA</div>
+        <div class="cap-desc">Terminal con la salida de <code>npm run test:coverage</code> mostrando los porcentajes (lines, statements, functions, branches) en rojo por estar &lt;80 %, y el resumen <code>ERROR: Coverage for ... does not meet threshold</code>. Pantalla completa.</div>
+      </div>
+    </div>
+    <div class="capture">
+      <div class="cap-num">📸 12</div>
+      <div class="cap-body">
+        <div class="cap-title">Captura 12 — PR feature/etapa-2 → develop verde</div>
+        <div class="cap-desc">Pestaña <em>Checks</em> del PR de <code>feature/etapa-2-crud</code> a <code>develop</code>. Todos los jobs del workflow <code>ci-develop</code> (lint backend, lint frontend, pruebas backend, build frontend) deben aparecer con ✓ verde. URL del PR visible.</div>
+      </div>
+    </div>
+    <div class="capture">
+      <div class="cap-num">📸 13</div>
+      <div class="cap-body">
+        <div class="cap-title">Captura 13 — PR develop → master FALLANDO</div>
+        <div class="cap-desc">Pestaña <em>Checks</em> del PR de <code>develop</code> a <code>master</code>. Deben verse al menos dos checks en rojo: <code>Backend coverage (&gt;=80%)</code> y <code>Frontend coverage (&gt;=80%)</code>, y normalmente también <code>SonarCloud Code Analysis</code>. URL del PR visible.</div>
+      </div>
+    </div>
+    <div class="capture">
+      <div class="cap-num">📸 14</div>
+      <div class="cap-body">
+        <div class="cap-title">Captura 14 — SonarCloud FAILED</div>
+        <div class="cap-desc">Dashboard del proyecto en SonarCloud (<em>Overview</em>) tras el análisis del PR a master. Debe verse el Quality Gate en rojo con leyenda "Failed" y la métrica fallida (Coverage on new code &lt; 80%). URL visible.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3><span class="badge-stage pass">ETAPA 3</span> Agregar tests para alcanzar el 80%</h3>
+    <p>Recibes la carpeta <code>etapa-3/</code> con los tests faltantes. Solo agregas archivos de tests; no tocas el código fuente del CRUD.</p>
+    <ol>
+      <li>Desde <code>develop</code> ya con etapa 2: <code>git checkout -b feature/etapa-3-tests</code>.</li>
+      <li>Aplicar el overlay:
+        <div class="code-wrap"><button class="copy-btn">Copiar</button><pre><code># PowerShell
+Copy-Item -Recurse -Force ..\etapa-3\backend .
+Copy-Item -Recurse -Force ..\etapa-3\frontend .
+
+# Git Bash / Linux
+cp -r ../etapa-3/backend ../etapa-3/frontend .</code></pre></div>
+      </li>
+      <li>Validar localmente: <code>pytest --cov=app --cov-fail-under=80</code> debe pasar con ~96 %.</li>
+      <li>Validar: <code>npm run test:coverage</code> debe pasar con 100 %.</li>
+      <li><code>git add . &amp;&amp; git commit -m "etapa 3: tests" &amp;&amp; git push -u origin feature/etapa-3-tests</code>.</li>
+      <li>Abrir <strong>PR a develop</strong>, pasa, mergear.</li>
+      <li>El PR <code>develop → master</code> que dejaste abierto en la Etapa 2 <strong>se actualiza automáticamente</strong> y ahora pasa todos los checks. SonarCloud queda en <strong>PASSED</strong>.</li>
+    </ol>
+
+    <div class="capture">
+      <div class="cap-num">📸 15</div>
+      <div class="cap-body">
+        <div class="cap-title">Captura 15 — Frontend con tareas reales</div>
+        <div class="cap-desc">Navegador en <code>http://localhost:5173</code> tras crear 3+ tareas mediante el formulario. Al menos una marcada como completada (tachada). Debe verse la lista, el botón de completar/eliminar y la URL completa.</div>
+      </div>
+    </div>
+    <div class="capture">
+      <div class="cap-num">📸 16</div>
+      <div class="cap-body">
+        <div class="cap-title">Captura 16 — pgAdmin con datos</div>
+        <div class="cap-desc">pgAdmin (<code>localhost:5050</code>) abierto en la tabla <code>tasks</code> mostrando con <em>"View/Edit Data → All Rows"</em> los registros creados desde el frontend. Pantalla completa.</div>
+      </div>
+    </div>
+    <div class="capture">
+      <div class="cap-num">📸 17</div>
+      <div class="cap-body">
+        <div class="cap-title">Captura 17 — Cobertura backend Etapa 3 PASA</div>
+        <div class="cap-desc">Terminal con la salida de <code>pytest --cov=app --cov-fail-under=80</code> mostrando la tabla por archivo, TOTAL ≥80 % (típicamente ~96 %) y la línea final verde <code>=== passed ===</code>. Pantalla completa.</div>
+      </div>
+    </div>
+    <div class="capture">
+      <div class="cap-num">📸 18</div>
+      <div class="cap-body">
+        <div class="cap-title">Captura 18 — Cobertura frontend Etapa 3 PASA</div>
+        <div class="cap-desc">Terminal con la salida de <code>npm run test:coverage</code> mostrando los 4 thresholds (lines, statements, functions, branches) en verde y el resumen sin errores. Pantalla completa.</div>
+      </div>
+    </div>
+    <div class="capture">
+      <div class="cap-num">📸 19</div>
+      <div class="cap-body">
+        <div class="cap-title">Captura 19 — PR develop → master PASANDO</div>
+        <div class="cap-desc">Pestaña <em>Checks</em> del PR <code>develop → master</code> (el mismo que estaba rojo en la Captura 13) ahora con los 5 jobs en ✓ verde, incluyendo <code>SonarCloud Quality Gate</code> en PASSED. URL visible.</div>
+      </div>
+    </div>
+    <div class="capture">
+      <div class="cap-num">📸 20</div>
+      <div class="cap-body">
+        <div class="cap-title">Captura 20 — Merge a master + Sonar PASSED</div>
+        <div class="cap-desc">Dos opciones (basta UNA pantalla que muestre las dos cosas, o dividir): el PR cerrado con el badge morado <strong>Merged</strong> y la URL del PR cerrado; junto a (o seguido por) el dashboard de SonarCloud con Quality Gate en verde "Passed". Si lo divides en dos pantallas, ambas deben aparecer en la misma página del PDF bajo la Captura 20.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Resultados esperados por etapa</h3>
+    <table>
+      <thead><tr><th></th><th>Etapa 1</th><th>Etapa 2</th><th>Etapa 3</th></tr></thead>
+      <tbody>
+        <tr><td>Cobertura backend</td><td>100 %</td><td>~56 %</td><td>~96 %</td></tr>
+        <tr><td>Cobertura frontend</td><td>100 %</td><td>~35 %</td><td>100 %</td></tr>
+        <tr><td>PR a <code>develop</code></td><td>n/a</td><td>✅ verde</td><td>✅ verde</td></tr>
+        <tr><td>PR a <code>master</code></td><td>n/a</td><td>❌ rojo</td><td>✅ verde</td></tr>
+        <tr><td>Quality Gate Sonar</td><td>—</td><td>❌ FAILED</td><td>✅ PASSED</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Checklist de ejecución de etapas</h3>
+    <div class="checklist" data-section="etapas">
+      <div class="check"><input type="checkbox" id="et1"><label for="et1"><span>Etapa 1 cerrada — stack levantado, 📸 Capturas 6, 7 y 8 tomadas</span></label></div>
+      <div class="check"><input type="checkbox" id="et2"><label for="et2"><span>Etapa 2 — Overlay aplicado y PR develop→master FALLANDO; 📸 Capturas 9, 10, 11, 12, 13 y 14 tomadas</span></label></div>
+      <div class="check"><input type="checkbox" id="et3"><label for="et3"><span>Etapa 3 — Tests aplicados, PR develop→master PASA, merge a master; 📸 Capturas 15, 16, 17, 18, 19 y 20 tomadas</span></label></div>
+      <div class="check"><input type="checkbox" id="et4"><label for="et4"><span>Tengo las 20 capturas (1-20) guardadas y nombradas en orden</span></label></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================== -->
+<section id="troubleshoot">
+  <h2>14. Problemas comunes</h2>
+
+  <div class="card">
+    <h3>Setup</h3>
+    <details><summary><code>python --version</code> sigue mostrando 3.14 después del script</summary>
+      Cierra TODAS las terminales abiertas y abre una nueva. PowerShell cachea PATH al inicio.
+      Si VSCode tiene una terminal integrada, reinicia VSCode.
+    </details>
+    <details><summary>El script no encuentra winget</summary>
+      Abre la Microsoft Store y actualiza "App Installer". Después reinicia la terminal.
+    </details>
+    <details><summary><code>node</code> dice "command not found" tras instalar con nvm</summary>
+      Ejecuta <code>nvm use 20.11.1</code> nuevamente y cierra/abre terminal. El symlink puede tardar un instante.
+    </details>
+  </div>
+
+  <div class="card">
+    <h3>Docker</h3>
+    <details><summary>Error "port already allocated"</summary>
+      Algo está usando el puerto 5173, 8000, 5432 o 5050. Identifícalo con
+      <code>netstat -ano | findstr 5432</code> y mátalo, o cambia el puerto en <code>.env</code>.
+    </details>
+    <details><summary>Error "Cannot connect to Docker daemon"</summary>
+      Docker Desktop no está corriendo. Ábrelo desde el menú inicio y espera a que el ícono se ponga verde.
+    </details>
+    <details><summary>El backend no se conecta a la BD</summary>
+      Revisar <code>docker compose logs backend</code>. Lo más común: la BD aún no terminó de inicializarse. El <code>healthcheck</code> debería evitarlo pero a veces toma 30s. Esperar y reintentar.
+    </details>
+  </div>
+
+  <div class="card">
+    <h3>Tests</h3>
+    <details><summary>pytest dice "no module named app"</summary>
+      Estás corriéndolo fuera de <code>backend/</code>. Hazle <code>cd</code> primero.
+      O usa <code>PYTHONPATH=. pytest</code>.
+    </details>
+    <details><summary>Vitest se queda colgado en "transforming"</summary>
+      Limpia: <code>rm -rf node_modules .vite &amp;&amp; npm install</code>.
+    </details>
+  </div>
+
+  <div class="card">
+    <h3>GitHub Actions</h3>
+    <details><summary>El workflow no se dispara al abrir el PR</summary>
+      Verifica que el archivo esté en <code>.github/workflows/</code> (con punto delante), nombre <code>.yml</code> (no <code>.yaml</code>), y que esté pusheado a la rama base. GitHub solo dispara workflows que existan en la rama destino.
+    </details>
+    <details><summary>SonarCloud falla con "Not authorized"</summary>
+      El <code>SONAR_TOKEN</code> no está bien configurado. Regenera en SonarCloud y vuelve a agregar como secret en GitHub.
+    </details>
+    <details><summary>Sonar dice "fetch-depth: 0 required"</summary>
+      En el step de <code>checkout</code> añade <code>with: { fetch-depth: 0 }</code>.
+    </details>
+    <details><summary>npm falla con "Cannot find module @rollup/rollup-linux-x64-gnu"</summary>
+      Bug conocido de npm con dependencias opcionales (<a href="https://github.com/npm/cli/issues/4828" target="_blank">cli/issues/4828</a>): el <code>package-lock.json</code> generado en Windows omite el binario nativo de Linux que Vite necesita en CI. Por eso este lab <strong>excluye <code>package-lock.json</code> del repo</strong> (ver <code>.gitignore</code>) y los workflows usan <code>npm install</code> en vez de <code>npm ci</code>. Si lo cometes accidentalmente, ejecuta <code>git rm frontend/package-lock.json</code> y vuelve a hacer push.
+    </details>
+    <details><summary>Sonar reporta "can't be indexed twice" para archivos de test</summary>
+      Los conjuntos <code>sonar.sources</code> y <code>sonar.tests</code> deben ser disjuntos. Si tienes <code>frontend/src</code> en sources y <code>frontend/src/__tests__</code> en tests, Sonar los ve duplicados. La solución (ya aplicada en este lab) es agregar <code>**/__tests__/**</code> a <code>sonar.exclusions</code>.
+    </details>
+    <details><summary>Sonar reporta cobertura baja (51%) aunque pytest dice 96%</summary>
+      Las rutas en <code>coverage.xml</code> no coinciden con <code>sonar.sources</code>. pytest-cov con <code>source=["app"]</code> escribe <code>filename="database.py"</code> pero Sonar busca <code>backend/app/database.py</code>. La solución (ya aplicada): el workflow tiene un paso <code>sed -i 's|filename="|filename="backend/app/|g' backend/coverage.xml</code> antes de subir el artefacto.
+    </details>
+    <details><summary>eslint falla con "Unexpected any" en archivos de test</summary>
+      Los mocks de vitest a menudo requieren <code>as any</code> porque sus tipos son complejos. El <code>.eslintrc.cjs</code> del lab ya tiene una excepción en <code>overrides</code> para archivos de <code>__tests__</code>.
+    </details>
+  </div>
+</section>
+
+</main>
+
+<aside class="sidebar" id="sidebar" aria-label="Progreso del laboratorio">
+  <div class="sidebar-header">
+    <h3>Progreso</h3>
+    <button class="collapse-btn" id="collapseBtn" title="Colapsar / expandir" aria-label="Colapsar o expandir panel de progreso">»</button>
+  </div>
+  <div class="global-progress">
+    <div class="label"><span>Total</span> <strong id="globalPct">0 %</strong></div>
+    <div class="progress"><div id="globalBar" style="width:0%"></div></div>
+  </div>
+  <nav class="progress-list" id="sidebarNav" aria-label="Progreso por sección">
+    <a href="#descripcion" data-tab="descripcion" class="active"><span class="sec-name">1. Descripción</span><span class="sec-progress sec-progress-detail" data-sec-prog></span><span class="sec-progress sec-progress-pct" data-sec-pct></span></a>
+    <a href="#entrega" data-tab="entrega"><span class="sec-name">2. Entrega</span><span class="sec-progress sec-progress-detail" data-sec-prog></span><span class="sec-progress sec-progress-pct" data-sec-pct></span></a>
+    <a href="#preparacion" data-tab="preparacion"><span class="sec-name">3. Preparación</span><span class="sec-progress sec-progress-detail" data-sec-prog></span><span class="sec-progress sec-progress-pct" data-sec-pct></span></a>
+    <a href="#arquitectura" data-tab="arquitectura"><span class="sec-name">4. Arquitectura</span><span class="sec-progress sec-progress-detail" data-sec-prog></span><span class="sec-progress sec-progress-pct" data-sec-pct></span></a>
+    <a href="#gitflow" data-tab="gitflow"><span class="sec-name">5. Git Flow</span><span class="sec-progress sec-progress-detail" data-sec-prog></span><span class="sec-progress sec-progress-pct" data-sec-pct></span></a>
+    <a href="#ci-cd" data-tab="ci-cd"><span class="sec-name">6. CI vs CD</span><span class="sec-progress sec-progress-detail" data-sec-prog></span><span class="sec-progress sec-progress-pct" data-sec-pct></span></a>
+    <a href="#lint" data-tab="lint"><span class="sec-name">7. Lint</span><span class="sec-progress sec-progress-detail" data-sec-prog></span><span class="sec-progress sec-progress-pct" data-sec-pct></span></a>
+    <a href="#tests" data-tab="tests"><span class="sec-name">8. Pruebas</span><span class="sec-progress sec-progress-detail" data-sec-prog></span><span class="sec-progress sec-progress-pct" data-sec-pct></span></a>
+    <a href="#cobertura" data-tab="cobertura"><span class="sec-name">9. Cobertura</span><span class="sec-progress sec-progress-detail" data-sec-prog></span><span class="sec-progress sec-progress-pct" data-sec-pct></span></a>
+    <a href="#sonar" data-tab="sonar"><span class="sec-name">10. SonarCloud</span><span class="sec-progress sec-progress-detail" data-sec-prog></span><span class="sec-progress sec-progress-pct" data-sec-pct></span></a>
+    <a href="#actions" data-tab="actions"><span class="sec-name">11. GitHub Actions</span><span class="sec-progress sec-progress-detail" data-sec-prog></span><span class="sec-progress sec-progress-pct" data-sec-pct></span></a>
+    <a href="#branch-protection" data-tab="branch-protection"><span class="sec-name">12. Branch Protection</span><span class="sec-progress sec-progress-detail" data-sec-prog></span><span class="sec-progress sec-progress-pct" data-sec-pct></span></a>
+    <a href="#etapas" data-tab="etapas"><span class="sec-name">13. Las 3 Etapas</span><span class="sec-progress sec-progress-detail" data-sec-prog></span><span class="sec-progress sec-progress-pct" data-sec-pct></span></a>
+    <a href="#troubleshoot" data-tab="troubleshoot"><span class="sec-name">14. Problemas comunes</span><span class="sec-progress sec-progress-detail" data-sec-prog></span><span class="sec-progress sec-progress-pct" data-sec-pct></span></a>
+  </nav>
+</aside>
+
+</div><!-- /.layout -->
+
+<script>
+  // Lista de secciones en orden (la fuente única de la verdad para prev/next y sidebar)
+  const ORDER = ['descripcion','entrega','preparacion','arquitectura','gitflow','ci-cd','lint','tests','cobertura','sonar','actions','branch-protection','etapas','troubleshoot'];
+  const TITLES = {
+    'descripcion':'1. Descripción','entrega':'2. Entrega','preparacion':'3. Preparación',
+    'arquitectura':'4. Arquitectura','gitflow':'5. Git Flow','ci-cd':'6. CI vs CD',
+    'lint':'7. Lint','tests':'8. Pruebas','cobertura':'9. Cobertura','sonar':'10. SonarCloud',
+    'actions':'11. GitHub Actions','branch-protection':'12. Branch Protection',
+    'etapas':'13. Las 3 Etapas','troubleshoot':'14. Problemas comunes'
+  };
+
+  // --- Capturar el source de cada diagrama mermaid ANTES del primer render ---
+  // (después de mermaid.run, el textContent contiene SVG renderizado, no el código fuente)
+  document.querySelectorAll('.mermaid').forEach(el => {
+    el.dataset.src = el.textContent;
+  });
+
+  // --- Inyectar botones prev/next al final de cada sección ---
+  const sections = document.querySelectorAll('section');
+  sections.forEach(sec => {
+    const idx = ORDER.indexOf(sec.id);
+    if (idx === -1) return;
+    const nav = document.createElement('div');
+    nav.className = 'section-nav';
+    const prevId = idx > 0 ? ORDER[idx-1] : null;
+    const nextId = idx < ORDER.length - 1 ? ORDER[idx+1] : null;
+    nav.innerHTML = `
+      <button class="prev" ${prevId ? `data-go="${prevId}"` : 'disabled'}>
+        <span class="nav-hint">← Anterior</span>
+        <span class="nav-title">${prevId ? TITLES[prevId] : '—'}</span>
+      </button>
+      <button class="next" ${nextId ? `data-go="${nextId}"` : 'disabled'}>
+        <span class="nav-hint">Siguiente →</span>
+        <span class="nav-title">${nextId ? TITLES[nextId] : '—'}</span>
+      </button>`;
+    sec.appendChild(nav);
+  });
+
+  // --- Tema oscuro/claro ---
+  const themeBtn = document.getElementById('themeToggle');
+  const saved = localStorage.getItem('lab-theme') || 'light';
+  document.body.dataset.theme = saved;
+  themeBtn.textContent = saved === 'dark' ? '☀️' : '🌙';
+  themeBtn.onclick = () => {
+    const next = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
+    document.body.dataset.theme = next;
+    themeBtn.textContent = next === 'dark' ? '☀️' : '🌙';
+    localStorage.setItem('lab-theme', next);
+    if (window.mermaid) {
+      mermaid.initialize({ startOnLoad: false, theme: next === 'dark' ? 'dark' : 'default', gitGraph: { showBranches: true } });
+      document.querySelectorAll('.mermaid').forEach(el => {
+        el.removeAttribute('data-processed');
+        el.innerHTML = el.dataset.src;   // source preservado al principio
+      });
+      renderMermaidWithSectionsVisible();
+    }
+  };
+
+  // --- Navegación (left nav + sidebar + prev/next) ---
+  const tabLinks = document.querySelectorAll('aside.leftnav nav a, aside.sidebar nav a');
+  function showTab(id) {
+    tabLinks.forEach(t => t.classList.toggle('active', t.dataset.tab === id));
+    sections.forEach(s => s.classList.toggle('active', s.id === id));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  tabLinks.forEach(t => t.addEventListener('click', e => {
+    e.preventDefault();
+    showTab(t.dataset.tab);
+    history.replaceState(null, '', '#' + t.dataset.tab);
+  }));
+
+  // --- Toggle colapsar/expandir asides (izq y der) ---
+  const sidebar = document.getElementById('sidebar');
+  const leftnav = document.getElementById('leftnav');
+  const layout = document.getElementById('layout');
+  const collapseBtn = document.getElementById('collapseBtn');
+  const collapseLeftBtn = document.getElementById('collapseLeftBtn');
+  function applyRightCollapsed(c) {
+    sidebar.classList.toggle('collapsed', c);
+    layout.classList.toggle('right-collapsed', c);
+    collapseBtn.textContent = c ? '«' : '»';
+    collapseBtn.title = c ? 'Expandir' : 'Colapsar';
+  }
+  function applyLeftCollapsed(c) {
+    leftnav.classList.toggle('collapsed', c);
+    layout.classList.toggle('left-collapsed', c);
+    collapseLeftBtn.textContent = c ? '»' : '«';
+    collapseLeftBtn.title = c ? 'Expandir' : 'Colapsar';
+  }
+  applyRightCollapsed(localStorage.getItem('lab-sidebar-collapsed') === '1');
+  applyLeftCollapsed(localStorage.getItem('lab-leftnav-collapsed') === '1');
+  collapseBtn.addEventListener('click', () => {
+    const next = !sidebar.classList.contains('collapsed');
+    applyRightCollapsed(next);
+    localStorage.setItem('lab-sidebar-collapsed', next ? '1' : '0');
+  });
+  collapseLeftBtn.addEventListener('click', () => {
+    const next = !leftnav.classList.contains('collapsed');
+    applyLeftCollapsed(next);
+    localStorage.setItem('lab-leftnav-collapsed', next ? '1' : '0');
+  });
+  // prev/next dentro de las secciones
+  document.querySelectorAll('.section-nav button[data-go]').forEach(b => {
+    b.addEventListener('click', () => {
+      const id = b.dataset.go;
+      showTab(id);
+      history.replaceState(null, '', '#' + id);
+    });
+  });
+  if (location.hash) {
+    const id = location.hash.slice(1);
+    if (document.getElementById(id) && ORDER.includes(id)) showTab(id);
+  }
+
+  // --- Botones copiar ---
+  document.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const code = btn.nextElementSibling.querySelector('code')?.textContent
+                ?? btn.nextElementSibling.textContent;
+      try {
+        await navigator.clipboard.writeText(code);
+        btn.textContent = '¡Copiado!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 1500);
+      } catch {
+        btn.textContent = 'Error';
+        setTimeout(() => { btn.textContent = 'Copiar'; }, 1500);
+      }
+    });
+  });
+
+  // --- Checklists con localStorage + cálculo de progreso ---
+  function updateProgress() {
+    let totalAll = 0, doneAll = 0;
+    sections.forEach(sec => {
+      const boxes = sec.querySelectorAll('.checklist input[type=checkbox]');
+      if (!boxes.length) return;
+      const done = [...boxes].filter(b => b.checked).length;
+      totalAll += boxes.length;
+      doneAll += done;
+      const link = document.querySelector(`aside.sidebar nav a[data-tab="${sec.id}"]`);
+      if (!link) return;
+      const detail = link.querySelector('[data-sec-prog]');
+      if (detail) detail.textContent = `${done}/${boxes.length}`;
+      const pctNode = link.querySelector('[data-sec-pct]');
+      if (pctNode) pctNode.textContent = `${Math.round(done * 100 / boxes.length)}%`;
+      link.classList.toggle('complete', done === boxes.length && boxes.length > 0);
+    });
+    const pct = totalAll ? Math.round(doneAll * 100 / totalAll) : 0;
+    document.getElementById('globalPct').textContent = `${pct} %`;
+    document.getElementById('globalBar').style.width = `${pct}%`;
+  }
+  document.querySelectorAll('.check input[type=checkbox]').forEach(cb => {
+    const key = 'check-' + cb.id;
+    cb.checked = localStorage.getItem(key) === '1';
+    cb.parentElement.classList.toggle('done', cb.checked);
+    cb.addEventListener('change', () => {
+      localStorage.setItem(key, cb.checked ? '1' : '0');
+      cb.parentElement.classList.toggle('done', cb.checked);
+      updateProgress();
+    });
+  });
+  updateProgress();
+
+  // --- Reset progreso ---
+  document.getElementById('resetProgress').onclick = () => {
+    if (!confirm('¿Borrar todos los checks guardados?')) return;
+    Object.keys(localStorage).filter(k => k.startsWith('check-')).forEach(k => localStorage.removeItem(k));
+    location.reload();
+  };
+
+  // --- Imprimir ---
+  document.getElementById('printBtn').onclick = () => {
+    sections.forEach(s => s.classList.add('active'));
+    setTimeout(() => {
+      window.print();
+      const id = location.hash.slice(1) || 'descripcion';
+      sections.forEach(s => s.classList.toggle('active', s.id === id));
+    }, 200);
+  };
+
+  // --- Mermaid: render con todas las secciones visibles para que mida bien ---
+  function renderMermaidWithSectionsVisible() {
+    const wasActive = [...sections].filter(s => s.classList.contains('active'));
+    sections.forEach(s => s.classList.add('active'));
+    return mermaid.run({ querySelector: '.mermaid' }).finally(() => {
+      sections.forEach(s => s.classList.remove('active'));
+      wasActive.forEach(s => s.classList.add('active'));
+    });
+  }
+  if (window.mermaid) {
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: document.body.dataset.theme === 'dark' ? 'dark' : 'default',
+      gitGraph: { showBranches: true }
+    });
+    renderMermaidWithSectionsVisible();
+  }
+</script>
+</body>
+</html>
