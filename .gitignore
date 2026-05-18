@@ -18,6 +18,9 @@ coverage/
 .npm/
 .pnpm-debug.log*
 *.tsbuildinfo
+# Excluido: el lockfile se regenera en cada install para evitar bug de rollup
+# con dependencias opcionales especificas de SO (cli/issues/4828)
+package-lock.json
 
 # --- IDE / OS ---
 .idea/

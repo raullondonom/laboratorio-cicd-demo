@@ -24,7 +24,7 @@ jobs:
         with:
           node-version: "20"
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: frontend/package.json
       - name: Instalar deps backend
         working-directory: backend
         run: pip install -r requirements.txt
@@ -74,7 +74,7 @@ jobs:
         with:
           node-version: "20"
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: frontend/package.json
       - name: Instalar dependencias
         working-directory: frontend
         run: npm install --no-audit --no-fund
