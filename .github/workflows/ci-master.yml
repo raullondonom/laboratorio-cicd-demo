@@ -56,8 +56,10 @@ jobs:
       - name: pytest con cobertura
         working-directory: backend
         run: pytest --cov=app --cov-report=xml --cov-report=term --cov-fail-under=80
-      - name: Fix coverage paths para Sonar (prefija backend/)
-        run: sed -i 's|filename="|filename="backend/|g' backend/coverage.xml
+      - name: Fix coverage paths para Sonar (prefija backend/app/)
+        # pytest-cov con `source=["app"]` omite el prefijo `app/`. Sonar lee las
+        # rutas relativas al proyecto y necesita `backend/app/...`.
+        run: sed -i 's|filename="|filename="backend/app/|g' backend/coverage.xml
       - name: Subir reporte como artifact
         if: always()
         uses: actions/upload-artifact@v4
