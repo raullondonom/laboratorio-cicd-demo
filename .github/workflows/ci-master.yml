@@ -90,22 +90,29 @@ jobs:
 
   sonarcloud:
     name: SonarCloud Quality Gate
+    # Corre siempre que los jobs de cobertura hayan terminado (pasen o fallen)
+    # para que el Quality Gate evalue tambien escenarios con cobertura baja.
     needs: [test-backend-coverage, test-frontend-coverage]
+    if: always()
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Descargar reporte backend
+        if: always()
         uses: actions/download-artifact@v4
         with:
           name: coverage-backend
           path: backend
+        continue-on-error: true
       - name: Descargar reporte frontend
+        if: always()
         uses: actions/download-artifact@v4
         with:
           name: coverage-frontend
           path: frontend/coverage
+        continue-on-error: true
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v2
         env:
