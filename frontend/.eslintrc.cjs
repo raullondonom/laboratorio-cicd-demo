@@ -15,5 +15,14 @@ module.exports = {
     ],
     "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
   },
+  overrides: [
+    {
+      // En archivos de prueba permitimos `any` para mocks
+      files: ["src/__tests__/**/*", "**/*.test.{ts,tsx}"],
+      rules: {
+        "@typescript-eslint/no-explicit-any": "off",
+      },
+    },
+  ],
   ignorePatterns: ["dist", "node_modules", "coverage", "*.cjs", "vite.config.ts"],
 };
